@@ -7,6 +7,22 @@ export function useSupabase() {
   const [laneLeaders, setLaneLeaders] = useState<LaneLeader[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [lastFetch, setLastFetch] = useState<number>(0);
+
+  // Cache de 30 segundos para evitar requests excessivas
+  const CACHE_DURATION = 30000;
+
+  // Função de retry com backoff exponencial
+  const retryWithBackoff = async (fn: () => Promise<any>, maxRetries = 3, delay = 1000) => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        return await fn();
+      } catch (err) {
+        if (i === maxRetries - 1) throw err;
+        await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
+      }
+    }
+  };
 
   // Converter dados do banco para o formato da aplicação
   const convertDatabasePlayerToPlayer = (dbPlayer: DatabasePlayer): Player => {
@@ -76,27 +92,39 @@ export function useSupabase() {
     }
   };
 
-  // Carregar jogadores do Supabase
-  const fetchPlayers = async () => {
+  // Carregar jogadores do Supabase com retry e cache
+  const fetchPlayers = async (forceRefresh = false) => {
+    // Verificar cache
+    const now = Date.now();
+    if (!forceRefresh && now - lastFetch < CACHE_DURATION) {
+      console.log('Usando dados em cache');
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
-        .from('players')
-        .select('*')
-        .order('average_rating', { ascending: false });
+      // Usar retry para requests
+      const { data, error } = await retryWithBackoff(async () => {
+        return await supabase
+          .from('players')
+          .select('*')
+          .order('average_rating', { ascending: false });
+      });
 
       if (error) throw error;
 
       const convertedPlayers = data.map(convertDatabasePlayerToPlayer);
       setPlayers(convertedPlayers);
       
-      // Carregar líderes de lane também
-      await fetchLaneLeaders();
+      // Carregar líderes de lane também com retry
+      await retryWithBackoff(() => fetchLaneLeaders());
+      
+      setLastFetch(now);
     } catch (err) {
       console.error('Erro ao carregar jogadores:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
+      setError(err instanceof Error ? err.message : 'Serviço temporariamente indisponível');
     } finally {
       setLoading(false);
     }
@@ -186,8 +214,8 @@ export function useSupabase() {
         if (updateError) throw updateError;
       }
 
-      // 5. Recarregar dados
-      await fetchPlayers();
+      // 5. Recarregar dados (forçar refresh para mostrar mudanças)
+      await fetchPlayers(true);
 
     } catch (err) {
       console.error('Erro ao adicionar partida:', err);
@@ -224,7 +252,7 @@ export function useSupabase() {
 
       if (error) throw error;
 
-      await fetchPlayers();
+      await fetchPlayers(true);
     } catch (err) {
       console.error('Erro ao resetar dados:', err);
       setError(err instanceof Error ? err.message : 'Erro ao resetar dados');
@@ -236,22 +264,8 @@ export function useSupabase() {
     fetchPlayers();
   }, []);
 
-  // Configurar realtime (dados em tempo real)
-  useEffect(() => {
-    const channel = supabase
-      .channel('players-changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'players' }, 
-        () => {
-          fetchPlayers(); // Recarregar quando houver mudanças
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
+  // Remover realtime para evitar problemas de rate limiting
+  // O realtime será substituído por refresh manual quando necessário
 
   return {
     players,

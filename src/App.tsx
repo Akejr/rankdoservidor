@@ -328,6 +328,16 @@ function App() {
                   <span>Conectado ao Supabase</span>
                 </div>
               </div>
+
+              {/* Refresh Button */}
+              <button
+                onClick={() => refetch(true)}
+                className="text-xs text-blue-400 hover:text-blue-300 bg-blue-900/20 px-3 py-2 rounded-lg border border-blue-700/30 transition-colors flex items-center space-x-1"
+                title="Atualizar dados"
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Atualizar</span>
+              </button>
               
               {/* Debug Button - Remove in production */}
               {process.env.NODE_ENV === 'development' && (

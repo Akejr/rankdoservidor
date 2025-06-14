@@ -11,20 +11,24 @@ console.log('Key length:', supabaseAnonKey?.length)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false
+  },
+  global: {
+    headers: {
+      'x-client-info': 'rank-lol-app@1.0.0'
+    }
+  },
+  db: {
+    schema: 'public'
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 2
+    }
   }
 })
 
-// Test connection
-console.log('🚀 Testando conexão Supabase...')
-supabase.from('players').select('count', { count: 'exact', head: true })
-  .then(({ error, count }) => {
-    if (error) {
-      console.error('❌ Erro na conexão:', error.message)
-      console.error('Detalhes:', error)
-    } else {
-      console.log('✅ Conexão OK - Jogadores encontrados:', count)
-    }
-  })
+// Conexão será testada apenas quando necessário
+// Remover teste automático para evitar rate limiting
 
 // Types para TypeScript
 export interface DatabasePlayer {
