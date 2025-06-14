@@ -124,6 +124,30 @@ INSERT INTO players (name, avatar) VALUES
 npm run dev
 ```
 
+## 🌐 Deploy no GitHub Pages
+
+### Configuração Automática
+O projeto está configurado para deploy automático no GitHub Pages via GitHub Actions.
+
+### Deploy Manual
+```bash
+npm run deploy
+```
+
+### Configurar GitHub Pages
+1. Vá para **Settings** > **Pages** no seu repositório
+2. Em **Source**, selecione **GitHub Actions**
+3. O deploy será feito automaticamente a cada push na branch `main`
+
+### URL do Projeto
+Após o deploy, o projeto estará disponível em:
+`https://seu-usuario.github.io/rankdoservidor/`
+
+### ⚠️ Importante para GitHub Pages
+- As variáveis de ambiente (.env) não funcionam no GitHub Pages
+- Para usar o Supabase em produção, configure as variáveis diretamente no código ou use GitHub Secrets
+- O projeto funcionará offline sem o Supabase (modo demo)
+
 ## 🎯 Como Usar
 
 ### Visualizar Ranking
