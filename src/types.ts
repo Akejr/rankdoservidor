@@ -5,6 +5,7 @@ export interface Player {
   totalRating: number;
   totalMatches: number;
   averageRating: number;
+  bayesianRating?: number;
   totalKills: number;
   totalDeaths: number;
   totalAssists: number;

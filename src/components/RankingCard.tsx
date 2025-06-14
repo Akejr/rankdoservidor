@@ -102,12 +102,17 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank }) => {
           <div className="flex flex-col items-end space-y-1">
             <div className="flex items-center space-x-1">
               <span className="text-xl sm:text-2xl font-bold text-white">
-                {player.averageRating.toFixed(1)}
+                {player.bayesianRating ? player.bayesianRating.toFixed(1) : player.averageRating.toFixed(1)}
               </span>
               {performance && (
                 <performance.icon className={`w-4 h-4 ${performance.color}`} />
               )}
             </div>
+            {player.bayesianRating && (
+              <div className="text-xs text-gray-400">
+                <span>Real: {player.averageRating.toFixed(1)}</span>
+              </div>
+            )}
             <div className="flex items-center space-x-1 text-xs">
               <span className="text-green-400 font-semibold">{player.averageKDA.kills.toFixed(1)}</span>
               <span className="text-gray-500">/</span>
@@ -171,13 +176,20 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank }) => {
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-1">
               <span className="text-3xl font-bold text-white">
-                {player.averageRating.toFixed(1)}
+                {player.bayesianRating ? player.bayesianRating.toFixed(1) : player.averageRating.toFixed(1)}
               </span>
               {performance && (
                 <performance.icon className={`w-5 h-5 ${performance.color}`} />
               )}
             </div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide">Performance</p>
+            {player.bayesianRating ? (
+              <div className="text-center">
+                <p className="text-xs text-blue-300 uppercase tracking-wide font-semibold">Score Bayesiano</p>
+                <p className="text-xs text-gray-400">Real: {player.averageRating.toFixed(1)}</p>
+              </div>
+            ) : (
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Performance</p>
+            )}
           </div>
 
           {/* KDA */}

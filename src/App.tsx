@@ -11,6 +11,14 @@ function App() {
   const { players, laneLeaders, serverBagre, loading, error, addMatch, resetPlayerStats, refetch } = useSupabase();
   const [showResetPassword, setShowResetPassword] = React.useState(false);
 
+  // Parâmetro de suavização da Média Bayesiana
+  const BAYESIAN_WEIGHT = 5; // Número de "partidas virtuais"
+
+  // Função para calcular a Média Bayesiana
+  const calculateBayesianAverage = (playerRating: number, playerMatches: number, globalAverage: number) => {
+    return (globalAverage * BAYESIAN_WEIGHT + playerRating * playerMatches) / (BAYESIAN_WEIGHT + playerMatches);
+  };
+
   // Error boundary básico
   React.useEffect(() => {
     const handleError = (event: ErrorEvent) => {
@@ -25,6 +33,8 @@ function App() {
   React.useEffect(() => {
     if (serverBagre) {
       console.log('ServerBagre atualizado:', serverBagre);
+      console.log('Avatar do bagre:', serverBagre.playerAvatar);
+      console.log('Nome do bagre:', serverBagre.playerName);
     }
   }, [serverBagre]);
 
@@ -89,16 +99,31 @@ function App() {
   };
 
   const sortedPlayers = useMemo(() => {
-    return [...players]
-      .filter((player: Player) => player.totalMatches > 0)
+    // Calcular a média geral de todos os jogadores com partidas
+    const playersWithMatches = players.filter((player: Player) => player.totalMatches > 0);
+    const globalAverage = playersWithMatches.length > 0 
+      ? playersWithMatches.reduce((sum, player) => sum + player.averageRating, 0) / playersWithMatches.length
+      : 5; // Valor padrão se não há jogadores com partidas
+
+    // Separar jogadores com partidas dos sem partidas
+    const playersWithMatchesAdjusted = playersWithMatches.map(player => ({
+      ...player,
+      bayesianRating: calculateBayesianAverage(player.averageRating, player.totalMatches, globalAverage)
+    }));
+
+    // Ordenar por Média Bayesiana
+    const sortedPlayersWithMatches = playersWithMatchesAdjusted
       .sort((a, b) => {
-        if (b.averageRating !== a.averageRating) {
-          return b.averageRating - a.averageRating;
+        if (b.bayesianRating !== a.bayesianRating) {
+          return b.bayesianRating - a.bayesianRating;
         }
         return b.totalMatches - a.totalMatches;
-      })
-      .concat(players.filter((player: Player) => player.totalMatches === 0));
-  }, [players]);
+      });
+    
+    const playersWithoutMatches = players.filter((player: Player) => player.totalMatches === 0);
+    
+    return [...sortedPlayersWithMatches, ...playersWithoutMatches];
+  }, [players, BAYESIAN_WEIGHT]);
 
   const handleAddMatch = async (matchData: MatchFormData) => {
     try {
@@ -194,8 +219,41 @@ function App() {
           </div>
           <div className="relative">
             <p className="text-lg sm:text-xl md:text-2xl text-gray-300 font-semibold tracking-wide">RANKING DOS INVOCADORES</p>
-            <p className="text-sm sm:text-base md:text-lg text-blue-400/80 mt-1 md:mt-2">Temporada 2024 • Fenda do Invocador</p>
+            <p className="text-sm sm:text-base md:text-lg text-blue-400/80 mt-1 md:mt-2">Temporada 2025 • Fenda do Invocador</p>
             <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-24 sm:w-32 h-1 bg-gradient-to-r from-transparent via-blue-400 to-transparent"></div>
+          </div>
+        </div>
+
+        {/* Bayesian Average Info */}
+        <div className="max-w-4xl mx-auto mb-8 md:mb-12">
+          <div className="bg-gradient-to-r from-blue-900/20 via-purple-900/20 to-blue-900/20 rounded-xl p-4 md:p-6 border border-blue-500/30 backdrop-blur-sm">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              <h3 className="text-lg md:text-xl font-bold text-blue-300">Sistema de Média Bayesiana</h3>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
+              <div className="space-y-2">
+                <p className="text-gray-300">
+                  <span className="font-semibold text-blue-400">O que é:</span> Jogadores com poucas partidas têm seu score "puxado" para perto da média geral ({(() => {
+                    const playersWithMatches = players.filter(p => p.totalMatches > 0);
+                    return playersWithMatches.length > 0 
+                      ? (playersWithMatches.reduce((sum, p) => sum + p.averageRating, 0) / playersWithMatches.length).toFixed(1)
+                      : '5.0';
+                  })()}).
+                </p>
+                <p className="text-gray-300">
+                  <span className="font-semibold text-green-400">Benefício:</span> Evita que jogadores com 1-2 partidas excelentes fiquem no topo sem ter provado consistência.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-gray-300">
+                  <span className="font-semibold text-purple-400">Fórmula:</span> <span className="font-mono text-sm bg-black/30 px-2 py-1 rounded">Score = (Média Geral × {BAYESIAN_WEIGHT} + Sua Média × Suas Partidas) / ({BAYESIAN_WEIGHT} + Suas Partidas)</span>
+                </p>
+                <p className="text-gray-300">
+                  <span className="font-semibold text-yellow-400">Peso:</span> {BAYESIAN_WEIGHT} partidas virtuais (suavização equilibrada).
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -386,102 +444,150 @@ function App() {
             <div className="mt-12 md:mt-16">
               <div className="flex items-center justify-center space-x-3 mb-6 md:mb-8">
                 <div className="w-1 h-6 sm:h-8 bg-gradient-to-b from-red-500 to-orange-600"></div>
-                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">BAGRE DO SERVIDOR</h2>
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">🐟 BAGRE DO SERVIDOR 🐟</h2>
                 <div className="w-1 h-6 sm:h-8 bg-gradient-to-b from-red-500 to-orange-600"></div>
               </div>
               
               <div className="flex justify-center">
                 <div 
-                  className="relative bg-gradient-to-br from-red-900/60 via-orange-900/60 to-red-800/60 rounded-lg md:rounded-xl p-6 md:p-8 border-4 border-red-500/60 text-center transition-all duration-500 hover:scale-105 hover:shadow-2xl shadow-red-500/20 backdrop-blur-md overflow-hidden group max-w-md"
+                  className="relative bg-gradient-to-br from-red-900/80 via-orange-900/80 to-red-800/80 rounded-lg md:rounded-xl p-6 md:p-8 border-4 border-red-500/80 text-center transition-all duration-500 hover:scale-105 hover:shadow-2xl shadow-red-500/40 backdrop-blur-md overflow-hidden group max-w-md animate-pulse-glow"
                   style={{
                     clipPath: 'polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px))',
                   }}
                 >
                   {/* Shame glow effect */}
-                  <div className="absolute inset-0 bg-red-500/20 rounded-lg md:rounded-xl blur-2xl opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
+                  <div className="absolute inset-0 bg-red-500/30 rounded-lg md:rounded-xl blur-2xl opacity-60 group-hover:opacity-80 transition-opacity duration-500"></div>
                   
-                  {/* Shame banner */}
+                  {/* Humilhation banner */}
                   <div className="relative mb-4">
-                    <div className="bg-gradient-to-r from-transparent via-red-500/30 to-transparent h-8 flex items-center justify-center border-y border-red-500/50">
-                      <div className="text-sm font-bold text-red-300 uppercase tracking-wider drop-shadow-md" style={{ fontFamily: 'serif' }}>
-                        💀 Pior Performance 💀
+                    <div className="bg-gradient-to-r from-transparent via-red-500/50 to-transparent h-10 flex items-center justify-center border-y-2 border-red-500/70">
+                      <div className="text-sm font-bold text-red-200 uppercase tracking-wider drop-shadow-md animate-bounce" style={{ fontFamily: 'serif' }}>
+                        💀 HALL DA VERGONHA 💀
                       </div>
                     </div>
-                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-red-500/50"></div>
+                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-red-500/70"></div>
                   </div>
 
-                  {/* Shame icon */}
-                  <div className="relative z-10 mb-4">
-                    <div className="relative inline-block">
-                      <div className="text-4xl animate-bounce">🐟</div>
-                      <div className="absolute inset-0 bg-red-500/30 rounded-full blur-lg animate-pulse"></div>
-                    </div>
+                  {/* Multiple shame emojis */}
+                  <div className="relative z-10 mb-4 flex justify-center space-x-2">
+                    <div className="text-3xl animate-bounce">🐟</div>
+                    <div className="text-3xl animate-bounce" style={{ animationDelay: '0.2s' }}>😭</div>
+                    <div className="text-3xl animate-bounce" style={{ animationDelay: '0.4s' }}>💩</div>
                   </div>
 
-                  {/* Player avatar with shame frame */}
+                  {/* Player avatar with maximum shame */}
                   <div className="relative z-10 mb-4">
                     <div className="relative inline-block">
-                      <div className="absolute -inset-1 bg-gradient-to-r from-red-500 to-orange-500 rounded-full p-0.5 animate-pulse">
-                        <div className="bg-slate-900 rounded-full p-0.5 flex items-center justify-center w-22 h-22">
-                          {serverBagre.playerAvatar ? (
+                      {/* Pulsing shame rings */}
+                      <div className="absolute -inset-6 border-2 border-red-500/40 rounded-full animate-ping"></div>
+                      <div className="absolute -inset-4 border-2 border-orange-500/50 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                      <div className="absolute -inset-2 border-2 border-red-400/60 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
+                      
+                      <div className="absolute -inset-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500 rounded-full p-1 animate-pulse">
+                        <div className="bg-slate-900 rounded-full p-1 flex items-center justify-center">
+                          <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-red-500/50 shadow-2xl">
                             <img
-                              src={serverBagre.playerAvatar}
+                              src={serverBagre.playerAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(serverBagre.playerName)}`}
                               alt={serverBagre.playerName}
-                              className="w-20 h-20 rounded-full shadow-2xl grayscale hover:grayscale-0 transition-all duration-300"
+                              className="w-full h-full object-cover sepia hover:sepia-0 transition-all duration-300 contrast-125"
+                              onLoad={() => console.log('Avatar do bagre carregado com sucesso!')}
                               onError={(e) => {
-                                console.log('Erro ao carregar avatar do bagre, usando fallback');
-                                (e.target as HTMLImageElement).style.display = 'none';
-                                const parent = (e.target as HTMLImageElement).parentElement;
-                                if (parent) {
-                                  parent.innerHTML = `
-                                    <div class="w-20 h-20 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-2xl font-bold text-white shadow-2xl">
-                                      ${serverBagre.playerName.charAt(0).toUpperCase()}
-                                    </div>
-                                  `;
-                                }
+                                console.log('Erro ao carregar avatar do bagre:', serverBagre.playerAvatar);
+                                console.log('Tentando fallback...');
+                                const img = e.target as HTMLImageElement;
+                                img.src = `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(serverBagre.playerName)}`;
+                                img.onerror = () => {
+                                  console.log('Fallback também falhou, usando div');
+                                  const parent = img.parentElement;
+                                  if (parent) {
+                                    parent.innerHTML = `
+                                      <div class="w-24 h-24 rounded-full bg-gradient-to-br from-red-600 to-orange-800 flex items-center justify-center text-3xl font-bold text-white shadow-2xl">
+                                        ${serverBagre.playerName.charAt(0).toUpperCase()}
+                                      </div>
+                                    `;
+                                  }
+                                };
                               }}
                             />
-                          ) : (
-                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-2xl font-bold text-white shadow-2xl">
-                              {serverBagre.playerName.charAt(0).toUpperCase()}
-                            </div>
-                          )}
+                          </div>
                         </div>
                       </div>
-                      <div className="absolute inset-0 bg-red-500/20 rounded-full blur-md opacity-50 animate-pulse"></div>
+                      
+                      {/* Shame label on avatar */}
+                      <div className="absolute -bottom-2 -right-2 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded-full border-2 border-red-400 animate-pulse">
+                        NOOB
+                      </div>
                     </div>
                   </div>
 
-                  {/* Player name */}
-                  <div className="relative z-10 mb-3">
-                    <p className="text-red-100 font-bold text-lg drop-shadow-md group-hover:text-red-50 transition-colors" style={{ fontFamily: 'serif', letterSpacing: '0.05em' }}>
+                  {/* Player name with maximum humiliation */}
+                  <div className="relative z-10 mb-4">
+                    <p className="text-red-100 font-bold text-xl drop-shadow-md group-hover:text-red-50 transition-colors animate-pulse" style={{ fontFamily: 'serif', letterSpacing: '0.05em' }}>
                       {serverBagre.playerName}
                     </p>
-                    <div className="h-px bg-gradient-to-r from-transparent via-red-500/50 to-transparent mt-1"></div>
+                    <p className="text-red-300/80 text-sm font-semibold italic mt-1" style={{ fontFamily: 'serif' }}>
+                      "O Lendário Fracassado"
+                    </p>
+                    <div className="h-px bg-gradient-to-r from-transparent via-red-500/70 to-transparent mt-2"></div>
                   </div>
 
-                  {/* Worst rating */}
-                  <div className="relative z-10 mb-2">
-                    <div className="text-red-300 font-bold text-2xl drop-shadow-lg group-hover:scale-110 transition-transform" style={{ fontFamily: 'serif' }}>
-                      {serverBagre.worstRating.toFixed(1)}
+                  {/* Humiliating messages */}
+                  <div className="relative z-10 mb-4">
+                    <div className="bg-black/40 rounded-lg p-3 border border-red-500/30 mb-3">
+                      <p className="text-red-200 text-sm font-semibold mb-1">📢 COMUNICADO OFICIAL:</p>
+                      <p className="text-red-300/90 text-xs italic">
+                        "Este jogador conseguiu a proeza de entregar mais que delivery de pizza. Parabéns pelo feito histórico!"
+                      </p>
                     </div>
-                    <div className="text-xs text-red-200/80 uppercase tracking-widest font-semibold drop-shadow-sm" style={{ fontFamily: 'serif' }}>
-                      Nota da Vergonha
+                    
+                    <div className="grid grid-cols-1 gap-2 text-xs">
+                      <div className="bg-red-900/30 rounded-md p-2 border border-red-500/20">
+                        <span className="text-orange-300 font-bold">🏆 Conquista:</span>
+                        <span className="text-red-200 ml-1">"Mestre dos Feeds"</span>
+                      </div>
+                      <div className="bg-red-900/30 rounded-md p-2 border border-red-500/20">
+                        <span className="text-orange-300 font-bold">📊 Status:</span>
+                        <span className="text-red-200 ml-1">"Mais perdido que turista"</span>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Date */}
-                  <div className="text-xs text-red-300/60 mt-2">
-                    {new Date(serverBagre.matchDate).toLocaleDateString('pt-BR')}
+                  {/* Worst rating with extra shame */}
+                  <div className="relative z-10 mb-4">
+                    <div className="bg-gradient-to-r from-red-900/50 to-orange-900/50 rounded-lg p-4 border-2 border-red-500/50">
+                      <div className="text-red-200 font-bold text-3xl drop-shadow-lg group-hover:scale-110 transition-transform animate-pulse" style={{ fontFamily: 'serif' }}>
+                        {serverBagre.worstRating.toFixed(1)}
+                      </div>
+                      <div className="text-xs text-red-200/90 uppercase tracking-widest font-bold drop-shadow-sm mt-1" style={{ fontFamily: 'serif' }}>
+                        💀 NOTA DA DESGRAÇA 💀
+                      </div>
+                      <div className="text-xs text-red-300/70 mt-2 italic">
+                        "Nem o sistema de avaliação entende como chegou a esse ponto"
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Decorative elements */}
-                  <div className="absolute bottom-0 left-0 w-3 h-3 border-l-2 border-b-2 border-red-500/40"></div>
-                  <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-red-500/40"></div>
+                  {/* Date with additional shame */}
+                  <div className="relative z-10">
+                    <div className="text-xs text-red-300/80 font-semibold">
+                      🗓️ Data da Desgraça: {new Date(serverBagre.matchDate).toLocaleDateString('pt-BR')}
+                    </div>
+                    <div className="text-xs text-red-400/60 mt-1 italic">
+                      "Um dia que entrará para a história... pelos motivos errados"
+                    </div>
+                  </div>
+
+                  {/* Enhanced decorative elements */}
+                  <div className="absolute bottom-0 left-0 w-4 h-4 border-l-2 border-b-2 border-red-500/60"></div>
+                  <div className="absolute bottom-0 right-0 w-4 h-4 border-r-2 border-b-2 border-red-500/60"></div>
+                  <div className="absolute top-0 left-0 w-4 h-4 border-l-2 border-t-2 border-red-500/60"></div>
+                  <div className="absolute top-0 right-0 w-4 h-4 border-r-2 border-t-2 border-red-500/60"></div>
                   
-                  {/* Shame particles */}
-                  <div className="absolute top-2 right-2 w-1 h-1 bg-red-400 rounded-full animate-ping"></div>
-                  <div className="absolute bottom-3 left-3 w-1 h-1 bg-orange-400 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                  {/* More shame particles */}
+                  <div className="absolute top-3 right-3 text-red-400 animate-ping">💩</div>
+                  <div className="absolute bottom-4 left-4 text-orange-400 animate-ping" style={{ animationDelay: '0.5s' }}>🤡</div>
+                  <div className="absolute top-1/2 left-2 text-red-400 animate-ping" style={{ animationDelay: '1s' }}>😢</div>
+                  <div className="absolute top-1/4 right-2 text-orange-400 animate-ping" style={{ animationDelay: '1.5s' }}>🔥</div>
                 </div>
               </div>
             </div>
