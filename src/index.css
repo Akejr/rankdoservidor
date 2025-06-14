@@ -45,6 +45,65 @@
   box-shadow: 0 6px 12px rgba(59, 130, 246, 0.5);
 }
 
+/* Professional Bagre Card Animations */
+@keyframes shame-glow {
+  0%, 100% {
+    box-shadow: 0 0 30px rgba(239, 68, 68, 0.4), 0 0 60px rgba(239, 68, 68, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(249, 115, 22, 0.6), 0 0 80px rgba(249, 115, 22, 0.3);
+  }
+}
+
+@keyframes floating-particle {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px) scale(1);
+    opacity: 0.3;
+  }
+  33% {
+    transform: translateY(-10px) translateX(5px) scale(1.1);
+    opacity: 0.6;
+  }
+  66% {
+    transform: translateY(5px) translateX(-5px) scale(0.9);
+    opacity: 0.4;
+  }
+}
+
+@keyframes degradation-pulse {
+  0%, 100% {
+    background: linear-gradient(135deg, rgba(185, 28, 28, 0.8), rgba(194, 65, 12, 0.8));
+  }
+  50% {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.9), rgba(249, 115, 22, 0.9));
+  }
+}
+
+@keyframes shame-badge-bounce {
+  0%, 100% {
+    transform: translateY(0) rotate(-5deg);
+  }
+  50% {
+    transform: translateY(-3px) rotate(5deg);
+  }
+}
+
+.animate-shame-glow {
+  animation: shame-glow 3s ease-in-out infinite;
+}
+
+.animate-floating-particle {
+  animation: floating-particle 4s ease-in-out infinite;
+}
+
+.animate-degradation-pulse {
+  animation: degradation-pulse 2s ease-in-out infinite;
+}
+
+.animate-shame-badge {
+  animation: shame-badge-bounce 2s ease-in-out infinite;
+}
+
 /* Pulsing Animation for Button */
 @keyframes pulse-glow {
   0%, 100% {
