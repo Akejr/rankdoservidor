@@ -5,11 +5,71 @@ import { AdminPanel } from './components/AdminPanel';
 import { useSupabase } from './hooks/useSupabase';
 import { SupabaseTest } from './components/SupabaseTest';
 import { PasswordPrompt } from './components/PasswordPrompt';
-import { Crown, Gamepad2, Swords, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Crown, Gamepad2, Swords, Loader2, AlertCircle, RefreshCw, Shield, Zap, Star, Target, Heart } from 'lucide-react';
 
 function App() {
-  const { players, loading, error, addMatch, resetPlayerStats, refetch } = useSupabase();
+  const { players, laneLeaders, loading, error, addMatch, resetPlayerStats, refetch } = useSupabase();
   const [showResetPassword, setShowResetPassword] = React.useState(false);
+
+  // Função para obter ícone da lane
+  const getLaneIcon = (lane: string) => {
+    switch (lane) {
+      case 'TOP': return Shield;
+      case 'JUNGLE': return Zap;
+      case 'MID': return Star;
+      case 'ADC': return Target;
+      case 'SUP': return Heart;
+      default: return Star;
+    }
+  };
+
+  // Função para obter cores da lane - Tema Medieval LoL
+  const getLaneColors = (lane: string) => {
+    switch (lane) {
+      case 'TOP': return {
+        bg: 'from-slate-900/90 via-blue-900/60 to-slate-800/90',
+        border: 'border-blue-300/60',
+        text: 'text-blue-300',
+        glow: 'bg-blue-300/30',
+        shadow: 'shadow-blue-500/20'
+      };
+      case 'JUNGLE': return {
+        bg: 'from-slate-900/90 via-emerald-900/60 to-green-900/90',
+        border: 'border-emerald-300/60',
+        text: 'text-emerald-300',
+        glow: 'bg-emerald-300/30',
+        shadow: 'shadow-emerald-500/20'
+      };
+      case 'MID': return {
+        bg: 'from-slate-900/90 via-purple-900/60 to-indigo-900/90',
+        border: 'border-purple-300/60',
+        text: 'text-purple-300',
+        glow: 'bg-purple-300/30',
+        shadow: 'shadow-purple-500/20'
+      };
+      case 'ADC': return {
+        bg: 'from-slate-900/90 via-red-900/60 to-rose-900/90',
+        border: 'border-red-300/60',
+        text: 'text-red-300',
+        glow: 'bg-red-300/30',
+        shadow: 'shadow-red-500/20'
+      };
+      case 'SUP': return {
+        bg: 'from-slate-900/90 via-amber-900/60 to-yellow-900/90',
+        border: 'border-amber-300/60',
+        text: 'text-amber-300',
+        glow: 'bg-amber-300/30',
+        shadow: 'shadow-amber-500/20'
+      };
+      default: return {
+        bg: 'from-slate-900/90 via-gray-800/60 to-slate-800/90',
+        border: 'border-gray-400/60',
+        text: 'text-gray-300',
+        glow: 'bg-gray-400/30',
+        shadow: 'shadow-gray-500/20'
+      };
+    }
+  };
 
   const sortedPlayers = useMemo(() => {
     return [...players]
@@ -108,6 +168,128 @@ function App() {
           </div>
         </div>
 
+        {/* Lane Leaders */}
+        {laneLeaders.length > 0 && (
+          <div className="max-w-6xl mx-auto mb-8 md:mb-12">
+            <div className="flex items-center space-x-3 mb-4 md:mb-6">
+              <div className="w-1 h-6 sm:h-8 bg-gradient-to-b from-yellow-400 to-orange-500"></div>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">LÍDERES POR POSIÇÃO</h2>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 md:gap-4">
+              {laneLeaders.map((leader) => {
+                const LaneIcon = getLaneIcon(leader.lane);
+                const colors = getLaneColors(leader.lane);
+                
+                return (
+                  <div 
+                    key={leader.lane} 
+                    className={`relative bg-gradient-to-br ${colors.bg} rounded-none border-4 ${colors.border} text-center transition-all duration-500 hover:scale-110 hover:shadow-2xl ${colors.shadow} backdrop-blur-md overflow-hidden group transform hover:-translate-y-1`}
+                    style={{
+                      clipPath: 'polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px))',
+                      background: `linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.95) 50%, rgba(0,0,0,0.8) 100%), ${colors.bg.replace('from-', 'linear-gradient(135deg, ').replace(' via-', ', ').replace(' to-', ', ')}`
+                    }}
+                  >
+                    {/* Medieval border decoration */}
+                    <div className="absolute inset-0 border-2 border-amber-500/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500" 
+                         style={{ clipPath: 'polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px))' }}></div>
+                    
+                    {/* Inner glow effect */}
+                    <div className={`absolute inset-0 ${colors.glow} blur-2xl opacity-0 group-hover:opacity-40 transition-opacity duration-500`}></div>
+                    
+                    {/* Corner ornaments */}
+                    <div className={`absolute top-0 left-0 w-6 h-6 ${colors.text} opacity-30`}>
+                      <div className="absolute top-1 left-1 w-1 h-4 bg-current transform rotate-45"></div>
+                      <div className="absolute top-1 left-1 w-4 h-1 bg-current transform rotate-45"></div>
+                    </div>
+                    <div className={`absolute top-0 right-0 w-6 h-6 ${colors.text} opacity-30`}>
+                      <div className="absolute top-1 right-1 w-1 h-4 bg-current transform -rotate-45"></div>
+                      <div className="absolute top-1 right-1 w-4 h-1 bg-current transform -rotate-45"></div>
+                    </div>
+
+                    <div className="relative z-10 p-4">
+                      {/* Medieval banner with lane */}
+                      <div className="relative mb-3">
+                        <div className={`bg-gradient-to-r from-transparent via-amber-500/20 to-transparent h-8 flex items-center justify-center border-y border-amber-500/40`}>
+                          <div className="flex items-center space-x-2">
+                            <div className={`relative ${colors.text} drop-shadow-lg`}>
+                              <LaneIcon className="w-4 h-4 filter drop-shadow-md" />
+                              <div className={`absolute inset-0 ${colors.glow} rounded-full blur-sm opacity-60`}></div>
+                            </div>
+                            <div className={`text-xs font-bold ${colors.text} uppercase tracking-wider drop-shadow-md`} style={{ fontFamily: 'serif' }}>
+                              {leader.lane}
+                            </div>
+                          </div>
+                        </div>
+                        {/* Banner tails */}
+                        <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-amber-500/40"></div>
+                      </div>
+
+                      {/* Legendary Crown */}
+                      <div className="relative z-10 mb-3">
+                        <div className="relative inline-block">
+                          <Crown className="w-6 h-6 text-amber-400 mx-auto animate-pulse filter drop-shadow-lg" />
+                          <div className="absolute inset-0 bg-amber-400/40 rounded-full blur-lg animate-pulse"></div>
+                          <div className="absolute -inset-2 border border-amber-500/30 rounded-full animate-spin" style={{ animationDuration: '8s' }}></div>
+                        </div>
+                      </div>
+
+                                             {/* Epic Avatar Frame */}
+                       <div className="relative z-10 mb-3">
+                         <div className="relative inline-block">
+                           {/* Power rings - Behind */}
+                           <div className={`absolute -inset-4 border ${colors.border} rounded-full opacity-20 animate-spin z-0`} style={{ animationDuration: '10s', animationDirection: 'reverse' }}></div>
+                           <div className={`absolute -inset-3 border-2 ${colors.border} rounded-full opacity-30 animate-spin z-0`} style={{ animationDuration: '6s' }}></div>
+                           
+                           {/* Magical aura - Behind */}
+                           <div className={`absolute -inset-2 ${colors.glow} rounded-full blur-lg opacity-30 animate-pulse z-0`}></div>
+                           
+                           {/* Avatar with frame - Front */}
+                           <div className={`relative z-20 bg-gradient-to-r ${colors.text.replace('text-', 'from-')} to-amber-400 rounded-full p-0.5 animate-pulse`}>
+                             <div className="bg-slate-900 rounded-full p-0.5">
+                               <img
+                                 src={leader.playerAvatar}
+                                 alt={leader.playerName}
+                                 className="w-14 h-14 rounded-full shadow-2xl relative z-30"
+                               />
+                             </div>
+                           </div>
+                         </div>
+                       </div>
+
+                      {/* Champion Name */}
+                      <div className="relative z-10 mb-2">
+                        <p className="text-amber-100 font-bold text-sm drop-shadow-md truncate group-hover:text-amber-50 transition-colors" style={{ fontFamily: 'serif', letterSpacing: '0.05em' }}>
+                          {leader.playerName}
+                        </p>
+                        <div className="h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent mt-1"></div>
+                      </div>
+
+                      {/* Epic Rating Display */}
+                      <div className="relative z-10">
+                        <div className={`${colors.text} font-bold text-xl drop-shadow-lg mb-1 group-hover:scale-110 transition-transform`} style={{ fontFamily: 'serif' }}>
+                          {leader.bestRating.toFixed(1)}
+                        </div>
+                        <div className="text-xs text-amber-200/80 uppercase tracking-widest font-semibold drop-shadow-sm" style={{ fontFamily: 'serif' }}>
+                          Lenda
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Medieval corner decorations */}
+                    <div className="absolute bottom-0 left-0 w-3 h-3 border-l-2 border-b-2 border-amber-500/40"></div>
+                    <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-amber-500/40"></div>
+                    
+                    {/* Mystical particles */}
+                    <div className="absolute top-2 right-2 w-1 h-1 bg-amber-400 rounded-full animate-ping"></div>
+                    <div className="absolute bottom-3 left-3 w-1 h-1 bg-amber-400 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                    <div className="absolute top-1/2 left-1 w-0.5 h-0.5 bg-amber-400 rounded-full animate-ping" style={{ animationDelay: '1s' }}></div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Ranking List */}
         <div className="max-w-6xl mx-auto">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 md:mb-8 space-y-4 sm:space-y-0">
@@ -117,8 +299,8 @@ function App() {
             </div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
               <div className="text-xs sm:text-sm text-gray-400 bg-gray-900/50 px-3 sm:px-4 py-2 rounded-lg border border-gray-700/50">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   <span>Conectado ao Supabase</span>
                 </div>
               </div>

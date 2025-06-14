@@ -28,7 +28,10 @@ export interface MatchParticipant {
   kills: number;
   deaths: number;
   assists: number;
+  lane: Lane;
 }
+
+export type Lane = 'TOP' | 'JUNGLE' | 'MID' | 'ADC' | 'SUP';
 
 export interface MatchFormData {
   player1: string;
@@ -56,4 +59,17 @@ export interface MatchFormData {
   assists3: number;
   assists4: number;
   assists5: number;
+  lane1: Lane;
+  lane2: Lane;
+  lane3: Lane;
+  lane4: Lane;
+  lane5: Lane;
+}
+
+export interface LaneLeader {
+  lane: Lane;
+  playerId: string;
+  playerName: string;
+  playerAvatar: string;
+  bestRating: number;
 }

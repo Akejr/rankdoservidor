@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase, DatabasePlayer, DatabaseMatch, DatabaseMatchParticipant } from '../lib/supabase';
-import { Player, MatchFormData, Match, MatchParticipant } from '../types';
+import { Player, MatchFormData, Match, MatchParticipant, LaneLeader, Lane } from '../types';
 
 export function useSupabase() {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [laneLeaders, setLaneLeaders] = useState<LaneLeader[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,6 +29,53 @@ export function useSupabase() {
     };
   };
 
+  // Calcular líderes de cada lane
+  const fetchLaneLeaders = async () => {
+    try {
+      const lanes: Lane[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUP'];
+      const leaders: LaneLeader[] = [];
+
+      for (const lane of lanes) {
+        const { data, error } = await supabase
+          .from('match_participants')
+          .select(`
+            rating,
+            lane,
+            player_id,
+            created_at,
+            players (
+              name,
+              avatar
+            )
+          `)
+          .eq('lane', lane)
+          .order('rating', { ascending: false })
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (error) {
+          console.warn(`Nenhum líder encontrado para lane ${lane}:`, error);
+          continue;
+        }
+
+        if (data && data.players) {
+          leaders.push({
+            lane,
+            playerId: data.player_id,
+            playerName: (data.players as any).name,
+            playerAvatar: (data.players as any).avatar,
+            bestRating: data.rating
+          });
+        }
+      }
+
+      setLaneLeaders(leaders);
+    } catch (err) {
+      console.error('Erro ao carregar líderes de lane:', err);
+    }
+  };
+
   // Carregar jogadores do Supabase
   const fetchPlayers = async () => {
     try {
@@ -43,6 +91,9 @@ export function useSupabase() {
 
       const convertedPlayers = data.map(convertDatabasePlayerToPlayer);
       setPlayers(convertedPlayers);
+      
+      // Carregar líderes de lane também
+      await fetchLaneLeaders();
     } catch (err) {
       console.error('Erro ao carregar jogadores:', err);
       setError(err instanceof Error ? err.message : 'Erro desconhecido');
@@ -69,11 +120,11 @@ export function useSupabase() {
 
       // 2. Preparar participantes (apenas jogadores válidos)
       const allParticipants = [
-        { playerId: matchData.player1, rating: matchData.rating1, kills: matchData.kills1, deaths: matchData.deaths1, assists: matchData.assists1 },
-        { playerId: matchData.player2, rating: matchData.rating2, kills: matchData.kills2, deaths: matchData.deaths2, assists: matchData.assists2 },
-        { playerId: matchData.player3, rating: matchData.rating3, kills: matchData.kills3, deaths: matchData.deaths3, assists: matchData.assists3 },
-        { playerId: matchData.player4, rating: matchData.rating4, kills: matchData.kills4, deaths: matchData.deaths4, assists: matchData.assists4 },
-        { playerId: matchData.player5, rating: matchData.rating5, kills: matchData.kills5, deaths: matchData.deaths5, assists: matchData.assists5 }
+        { playerId: matchData.player1, rating: matchData.rating1, kills: matchData.kills1, deaths: matchData.deaths1, assists: matchData.assists1, lane: matchData.lane1 },
+        { playerId: matchData.player2, rating: matchData.rating2, kills: matchData.kills2, deaths: matchData.deaths2, assists: matchData.assists2, lane: matchData.lane2 },
+        { playerId: matchData.player3, rating: matchData.rating3, kills: matchData.kills3, deaths: matchData.deaths3, assists: matchData.assists3, lane: matchData.lane3 },
+        { playerId: matchData.player4, rating: matchData.rating4, kills: matchData.kills4, deaths: matchData.deaths4, assists: matchData.assists4, lane: matchData.lane4 },
+        { playerId: matchData.player5, rating: matchData.rating5, kills: matchData.kills5, deaths: matchData.deaths5, assists: matchData.assists5, lane: matchData.lane5 }
       ];
 
       // Filtrar apenas participantes com playerId válido (não vazio)
@@ -90,7 +141,8 @@ export function useSupabase() {
         rating: p.rating,
         kills: p.kills,
         deaths: p.deaths,
-        assists: p.assists
+        assists: p.assists,
+        lane: p.lane
       }));
 
       const { error: participantsError } = await supabase
@@ -203,6 +255,7 @@ export function useSupabase() {
 
   return {
     players,
+    laneLeaders,
     loading,
     error,
     addMatch,

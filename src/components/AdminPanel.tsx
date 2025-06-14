@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Player, MatchFormData } from '../types';
+import { Player, MatchFormData, Lane } from '../types';
 import { PasswordPrompt } from './PasswordPrompt';
 import { 
   Plus, Save, X, Swords, Trophy, Zap, Target, 
@@ -20,6 +20,7 @@ interface PlayerSlot {
   kills: number;
   deaths: number;
   assists: number;
+  lane: Lane;
 }
 
 export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) => {
@@ -36,6 +37,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
     kills1: 0, kills2: 0, kills3: 0, kills4: 0, kills5: 0,
     deaths1: 0, deaths2: 0, deaths3: 0, deaths4: 0, deaths5: 0,
     assists1: 0, assists2: 0, assists3: 0, assists4: 0, assists5: 0,
+    lane1: 'TOP', lane2: 'JUNGLE', lane3: 'MID', lane4: 'ADC', lane5: 'SUP',
   });
 
   const resetForm = () => {
@@ -49,8 +51,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
       kills1: 0, kills2: 0, kills3: 0, kills4: 0, kills5: 0,
       deaths1: 0, deaths2: 0, deaths3: 0, deaths4: 0, deaths5: 0,
       assists1: 0, assists2: 0, assists3: 0, assists4: 0, assists5: 0,
+      lane1: 'TOP', lane2: 'JUNGLE', lane3: 'MID', lane4: 'ADC', lane5: 'SUP',
     });
   };
+
+  const lanes: Lane[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUP'];
 
   const handlePlayerSelect = (player: Player) => {
     if (selectedPlayers.length >= 5) return;
@@ -62,7 +67,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
       rating: 5,
       kills: 0,
       deaths: 0,
-      assists: 0
+      assists: 0,
+      lane: lanes[selectedPlayers.length]
     };
 
     setSelectedPlayers(prev => [...prev, newPlayer]);
@@ -145,6 +151,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
         assists3: selectedPlayers[2]?.assists || 0,
         assists4: selectedPlayers[3]?.assists || 0,
         assists5: selectedPlayers[4]?.assists || 0,
+        lane1: selectedPlayers[0]?.lane || 'TOP',
+        lane2: selectedPlayers[1]?.lane || 'JUNGLE',
+        lane3: selectedPlayers[2]?.lane || 'MID',
+        lane4: selectedPlayers[3]?.lane || 'ADC',
+        lane5: selectedPlayers[4]?.lane || 'SUP',
       };
 
       console.log('Enviando partida com dados:', matchData);
@@ -218,14 +229,14 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
                 currentStep >= 2 ? 'bg-blue-500 text-white' : 'bg-gray-600 text-gray-400'
               }`}>
                 2
-              </div>
             </div>
-            <button
+          </div>
+          <button
               onClick={() => { setIsOpen(false); resetForm(); }}
               className="text-gray-400 hover:text-white transition-colors p-2 sm:p-3 hover:bg-slate-700/50 rounded-lg"
-            >
+          >
               <X className="w-6 h-6 sm:w-7 sm:h-7" />
-            </button>
+          </button>
           </div>
         </div>
 
@@ -266,6 +277,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
                     >
                       {player ? (
                         <div className="text-center">
+                          <div className="text-xs font-bold text-yellow-400 mb-1">{player.lane}</div>
                           <img
                             src={player.avatar}
                             alt={player.name}
@@ -281,6 +293,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
                         </div>
                       ) : (
                         <div className="text-center text-gray-500">
+                          <div className="text-xs font-bold text-gray-400 mb-1">{lanes[index]}</div>
                           <div className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-gray-700/50 rounded-full mx-auto mb-1 md:mb-2 flex items-center justify-center">
                             <UserPlus className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8" />
                           </div>
@@ -292,7 +305,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
                     </div>
                   );
                 })}
-              </div>
+                  </div>
               
               {selectedPlayers.length > 0 && selectedPlayers.length < 5 && (
                 <div className="mt-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg">
@@ -301,8 +314,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
                   </p>
                 </div>
               )}
-            </div>
-
+                </div>
+                
             {/* Available Players */}
             <div className="mb-8">
               <h3 className="text-2xl font-bold text-white mb-4">Invocadores Disponíveis</h3>
@@ -347,7 +360,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
                       <h3 className="text-xl font-bold text-white">{player.name}</h3>
                       <p className="text-sm text-gray-400">Invocador #{index + 1}</p>
                     </div>
-                  </div>
+                </div>
 
                   {/* Performance Rating */}
                   <div className="mb-6">
@@ -356,11 +369,11 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
                       Performance (1-10)
                     </label>
                     <div className="relative">
-                      <input
+                  <input
                         type="range"
-                        min="1"
-                        max="10"
-                        step="0.1"
+                    min="1"
+                    max="10"
+                    step="0.1"
                         value={player.rating}
                         onChange={(e) => updatePlayerStats(player.id, 'rating', parseFloat(e.target.value))}
                         className="w-full h-3 bg-slate-700 rounded-lg appearance-none cursor-pointer slider"
@@ -371,46 +384,46 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
                         <span>10</span>
                       </div>
                     </div>
-                  </div>
+                </div>
 
                   {/* KDA Stats */}
                   <div className="grid grid-cols-3 gap-4 mb-4">
-                    <div>
+                  <div>
                       <label className="block text-sm font-semibold text-green-400 mb-2 uppercase tracking-wide flex items-center">
                         <Target className="w-4 h-4 mr-1" />
                         Kills
                       </label>
-                      <input
-                        type="number"
-                        min="0"
+                    <input
+                      type="number"
+                      min="0"
                         max="99"
                         value={player.kills}
                         onChange={(e) => updatePlayerStats(player.id, 'kills', parseInt(e.target.value) || 0)}
                         className="w-full bg-slate-700/50 border border-green-500/30 rounded-lg px-4 py-3 text-white text-center text-xl font-bold focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-                    <div>
+                    />
+                  </div>
+                  <div>
                       <label className="block text-sm font-semibold text-red-400 mb-2 uppercase tracking-wide flex items-center">
                         <X className="w-4 h-4 mr-1" />
                         Deaths
                       </label>
-                      <input
-                        type="number"
-                        min="0"
+                    <input
+                      type="number"
+                      min="0"
                         max="99"
                         value={player.deaths}
                         onChange={(e) => updatePlayerStats(player.id, 'deaths', parseInt(e.target.value) || 0)}
                         className="w-full bg-slate-700/50 border border-red-500/30 rounded-lg px-4 py-3 text-white text-center text-xl font-bold focus:ring-2 focus:ring-red-500 focus:border-transparent transition-all"
-                      />
-                    </div>
-                    <div>
+                    />
+                  </div>
+                  <div>
                       <label className="block text-sm font-semibold text-blue-400 mb-2 uppercase tracking-wide flex items-center">
                         <Users className="w-4 h-4 mr-1" />
                         Assists
                       </label>
-                      <input
-                        type="number"
-                        min="0"
+                    <input
+                      type="number"
+                      min="0"
                         max="99"
                         value={player.assists}
                         onChange={(e) => updatePlayerStats(player.id, 'assists', parseInt(e.target.value) || 0)}
@@ -438,7 +451,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
             <div className="flex items-center space-x-2 text-red-400">
               <AlertCircle className="w-5 h-5" />
               <h4 className="font-semibold">Erros encontrados:</h4>
-            </div>
+              </div>
             <ul className="mt-2 text-red-300 text-sm space-y-1">
               {formErrors.map((error, index) => (
                 <li key={index}>• {error}</li>
@@ -479,7 +492,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) =
                 </>
               ) : (
                 <>
-                  <Save className="w-5 h-5" />
+              <Save className="w-5 h-5" />
                   <span>Salvar Batalha</span>
                 </>
               )}

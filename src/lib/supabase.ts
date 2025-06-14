@@ -58,5 +58,6 @@ export interface DatabaseMatchParticipant {
   kills: number
   deaths: number
   assists: number
+  lane: string
   created_at: string
 } 

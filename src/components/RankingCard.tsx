@@ -123,106 +123,106 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank }) => {
 
         {/* Desktop Layout */}
         <div className="hidden md:flex items-center justify-between">
-          <div className="flex items-center space-x-6">
-            {/* Rank Number */}
-            <div className="flex items-center space-x-3">
-              <div className={`text-4xl font-bold ${style.text} relative`}>
-                #{rank}
-                {rank <= 3 && (
-                  <div className="absolute -inset-2 bg-gradient-to-r from-transparent via-current to-transparent opacity-20 blur-sm"></div>
-                )}
-              </div>
-              {getRankIcon(rank)}
-            </div>
-            
-            {/* Player Avatar */}
-            <div className="relative">
-              <div className="relative">
-                <img 
-                  src={player.avatar} 
-                  alt={player.name}
-                  className="w-16 h-16 rounded-full border-3 border-blue-500/60 shadow-lg"
-                />
-                <div className="absolute inset-0 w-16 h-16 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20"></div>
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 rounded-full border-2 border-black shadow-lg animate-pulse"></div>
-              {/* Rank Badge */}
+        <div className="flex items-center space-x-6">
+          {/* Rank Number */}
+          <div className="flex items-center space-x-3">
+            <div className={`text-4xl font-bold ${style.text} relative`}>
+              #{rank}
               {rank <= 3 && (
-                <div className={`absolute -top-2 -left-2 w-6 h-6 ${style.bg} ${style.border} border rounded-full flex items-center justify-center`}>
-                  <span className={`text-xs font-bold ${style.text}`}>{rank}</span>
+                <div className="absolute -inset-2 bg-gradient-to-r from-transparent via-current to-transparent opacity-20 blur-sm"></div>
+              )}
+            </div>
+            {getRankIcon(rank)}
+          </div>
+          
+          {/* Player Avatar */}
+          <div className="relative">
+            <div className="relative">
+              <img 
+                src={player.avatar} 
+                alt={player.name}
+                className="w-16 h-16 rounded-full border-3 border-blue-500/60 shadow-lg"
+              />
+              <div className="absolute inset-0 w-16 h-16 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20"></div>
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-400 rounded-full border-2 border-black shadow-lg animate-pulse"></div>
+            {/* Rank Badge */}
+            {rank <= 3 && (
+              <div className={`absolute -top-2 -left-2 w-6 h-6 ${style.bg} ${style.border} border rounded-full flex items-center justify-center`}>
+                <span className={`text-xs font-bold ${style.text}`}>{rank}</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Player Info */}
+          <div>
+            <h3 className="text-2xl font-bold text-white mb-1">{player.name}</h3>
+            <div className="flex items-center space-x-4 text-sm text-gray-400">
+              <span>{player.totalMatches} {player.totalMatches === 1 ? 'batalha' : 'batalhas'}</span>
+              <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
+              <span>Invocador Ativo</span>
+            </div>
+          </div>
+        </div>
+
+          {/* Desktop Stats */}
+        <div className="flex items-center space-x-8">
+          {/* Average Rating */}
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-2 mb-1">
+              <span className="text-3xl font-bold text-white">
+                {player.averageRating.toFixed(1)}
+              </span>
+              {performance && (
+                <performance.icon className={`w-5 h-5 ${performance.color}`} />
+              )}
+            </div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Performance</p>
+          </div>
+
+          {/* KDA */}
+          <div className="text-center">
+            <div className="flex items-center space-x-1 mb-1">
+              <Sword className="w-4 h-4 text-red-400" />
+              <span className="text-lg font-bold text-green-400">
+                {player.averageKDA.kills.toFixed(1)}
+              </span>
+              <span className="text-gray-500">/</span>
+              <span className="text-lg font-bold text-red-400">
+                {player.averageKDA.deaths.toFixed(1)}
+              </span>
+              <span className="text-gray-500">/</span>
+              <span className="text-lg font-bold text-blue-400">
+                {player.averageKDA.assists.toFixed(1)}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">K/D/A Médio</p>
+          </div>
+
+          {/* KD Ratio */}
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-1 mb-1">
+              <Target className="w-4 h-4 text-purple-400" />
+              <span className="text-xl font-bold text-purple-300">
+                {kdRatio}
+              </span>
+            </div>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">KD Ratio</p>
+          </div>
+
+          {/* Efficiency Badge */}
+          <div className="text-center">
+            <div className="relative">
+              <div className={`w-12 h-12 rounded-full ${style.bg} ${style.border} border flex items-center justify-center`}>
+                <Shield className={`w-6 h-6 ${style.text}`} />
+              </div>
+              {player.averageRating >= 8 && (
+                <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
+                  <span className="text-xs text-black font-bold">★</span>
                 </div>
               )}
             </div>
-            
-            {/* Player Info */}
-            <div>
-              <h3 className="text-2xl font-bold text-white mb-1">{player.name}</h3>
-              <div className="flex items-center space-x-4 text-sm text-gray-400">
-                <span>{player.totalMatches} {player.totalMatches === 1 ? 'batalha' : 'batalhas'}</span>
-                <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
-                <span>Invocador Ativo</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Desktop Stats */}
-          <div className="flex items-center space-x-8">
-            {/* Average Rating */}
-            <div className="text-center">
-              <div className="flex items-center justify-center space-x-2 mb-1">
-                <span className="text-3xl font-bold text-white">
-                  {player.averageRating.toFixed(1)}
-                </span>
-                {performance && (
-                  <performance.icon className={`w-5 h-5 ${performance.color}`} />
-                )}
-              </div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide">Performance</p>
-            </div>
-
-            {/* KDA */}
-            <div className="text-center">
-              <div className="flex items-center space-x-1 mb-1">
-                <Sword className="w-4 h-4 text-red-400" />
-                <span className="text-lg font-bold text-green-400">
-                  {player.averageKDA.kills.toFixed(1)}
-                </span>
-                <span className="text-gray-500">/</span>
-                <span className="text-lg font-bold text-red-400">
-                  {player.averageKDA.deaths.toFixed(1)}
-                </span>
-                <span className="text-gray-500">/</span>
-                <span className="text-lg font-bold text-blue-400">
-                  {player.averageKDA.assists.toFixed(1)}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide">K/D/A Médio</p>
-            </div>
-
-            {/* KD Ratio */}
-            <div className="text-center">
-              <div className="flex items-center justify-center space-x-1 mb-1">
-                <Target className="w-4 h-4 text-purple-400" />
-                <span className="text-xl font-bold text-purple-300">
-                  {kdRatio}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide">KD Ratio</p>
-            </div>
-
-            {/* Efficiency Badge */}
-            <div className="text-center">
-              <div className="relative">
-                <div className={`w-12 h-12 rounded-full ${style.bg} ${style.border} border flex items-center justify-center`}>
-                  <Shield className={`w-6 h-6 ${style.text}`} />
-                </div>
-                {player.averageRating >= 8 && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 rounded-full flex items-center justify-center">
-                    <span className="text-xs text-black font-bold">★</span>
-                  </div>
-                )}
-              </div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide mt-1">Elite</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide mt-1">Elite</p>
             </div>
           </div>
         </div>
