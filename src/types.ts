@@ -73,3 +73,11 @@ export interface LaneLeader {
   playerAvatar: string;
   bestRating: number;
 }
+
+export interface ServerBagre {
+  playerId: string;
+  playerName: string;
+  playerAvatar: string;
+  worstRating: number;
+  matchDate: string;
+}

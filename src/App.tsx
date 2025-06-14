@@ -8,7 +8,7 @@ import { PasswordPrompt } from './components/PasswordPrompt';
 import { Crown, Gamepad2, Swords, Loader2, AlertCircle, RefreshCw, Shield, Zap, Star, Target, Heart } from 'lucide-react';
 
 function App() {
-  const { players, laneLeaders, loading, error, addMatch, resetPlayerStats, refetch } = useSupabase();
+  const { players, laneLeaders, serverBagre, loading, error, addMatch, resetPlayerStats, refetch } = useSupabase();
   const [showResetPassword, setShowResetPassword] = React.useState(false);
 
   // Error boundary básico
@@ -20,6 +20,13 @@ function App() {
     window.addEventListener('error', handleError);
     return () => window.removeEventListener('error', handleError);
   }, []);
+
+  // Debug do serverBagre
+  React.useEffect(() => {
+    if (serverBagre) {
+      console.log('ServerBagre atualizado:', serverBagre);
+    }
+  }, [serverBagre]);
 
   // Função para obter ícone da lane
   const getLaneIcon = (lane: string) => {
@@ -371,6 +378,112 @@ function App() {
               <h3 className="text-xl sm:text-2xl font-bold text-gray-400 mb-2 md:mb-3">Nenhuma Batalha Registrada</h3>
               <p className="text-gray-500 text-base sm:text-lg px-4">A Fenda aguarda pelos primeiros combates...</p>
               <div className="mt-3 md:mt-4 w-20 sm:w-24 h-1 bg-gradient-to-r from-transparent via-gray-600 to-transparent mx-auto"></div>
+            </div>
+          )}
+
+          {/* Bagre do Servidor */}
+          {serverBagre && sortedPlayers.filter(p => p.totalMatches > 0).length > 0 && (
+            <div className="mt-12 md:mt-16">
+              <div className="flex items-center justify-center space-x-3 mb-6 md:mb-8">
+                <div className="w-1 h-6 sm:h-8 bg-gradient-to-b from-red-500 to-orange-600"></div>
+                <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">BAGRE DO SERVIDOR</h2>
+                <div className="w-1 h-6 sm:h-8 bg-gradient-to-b from-red-500 to-orange-600"></div>
+              </div>
+              
+              <div className="flex justify-center">
+                <div 
+                  className="relative bg-gradient-to-br from-red-900/60 via-orange-900/60 to-red-800/60 rounded-lg md:rounded-xl p-6 md:p-8 border-4 border-red-500/60 text-center transition-all duration-500 hover:scale-105 hover:shadow-2xl shadow-red-500/20 backdrop-blur-md overflow-hidden group max-w-md"
+                  style={{
+                    clipPath: 'polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px))',
+                  }}
+                >
+                  {/* Shame glow effect */}
+                  <div className="absolute inset-0 bg-red-500/20 rounded-lg md:rounded-xl blur-2xl opacity-0 group-hover:opacity-50 transition-opacity duration-500"></div>
+                  
+                  {/* Shame banner */}
+                  <div className="relative mb-4">
+                    <div className="bg-gradient-to-r from-transparent via-red-500/30 to-transparent h-8 flex items-center justify-center border-y border-red-500/50">
+                      <div className="text-sm font-bold text-red-300 uppercase tracking-wider drop-shadow-md" style={{ fontFamily: 'serif' }}>
+                        💀 Pior Performance 💀
+                      </div>
+                    </div>
+                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-red-500/50"></div>
+                  </div>
+
+                  {/* Shame icon */}
+                  <div className="relative z-10 mb-4">
+                    <div className="relative inline-block">
+                      <div className="text-4xl animate-bounce">🐟</div>
+                      <div className="absolute inset-0 bg-red-500/30 rounded-full blur-lg animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  {/* Player avatar with shame frame */}
+                  <div className="relative z-10 mb-4">
+                    <div className="relative inline-block">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-red-500 to-orange-500 rounded-full p-0.5 animate-pulse">
+                        <div className="bg-slate-900 rounded-full p-0.5 flex items-center justify-center w-22 h-22">
+                          {serverBagre.playerAvatar ? (
+                            <img
+                              src={serverBagre.playerAvatar}
+                              alt={serverBagre.playerName}
+                              className="w-20 h-20 rounded-full shadow-2xl grayscale hover:grayscale-0 transition-all duration-300"
+                              onError={(e) => {
+                                console.log('Erro ao carregar avatar do bagre, usando fallback');
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                const parent = (e.target as HTMLImageElement).parentElement;
+                                if (parent) {
+                                  parent.innerHTML = `
+                                    <div class="w-20 h-20 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-2xl font-bold text-white shadow-2xl">
+                                      ${serverBagre.playerName.charAt(0).toUpperCase()}
+                                    </div>
+                                  `;
+                                }
+                              }}
+                            />
+                          ) : (
+                            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center text-2xl font-bold text-white shadow-2xl">
+                              {serverBagre.playerName.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="absolute inset-0 bg-red-500/20 rounded-full blur-md opacity-50 animate-pulse"></div>
+                    </div>
+                  </div>
+
+                  {/* Player name */}
+                  <div className="relative z-10 mb-3">
+                    <p className="text-red-100 font-bold text-lg drop-shadow-md group-hover:text-red-50 transition-colors" style={{ fontFamily: 'serif', letterSpacing: '0.05em' }}>
+                      {serverBagre.playerName}
+                    </p>
+                    <div className="h-px bg-gradient-to-r from-transparent via-red-500/50 to-transparent mt-1"></div>
+                  </div>
+
+                  {/* Worst rating */}
+                  <div className="relative z-10 mb-2">
+                    <div className="text-red-300 font-bold text-2xl drop-shadow-lg group-hover:scale-110 transition-transform" style={{ fontFamily: 'serif' }}>
+                      {serverBagre.worstRating.toFixed(1)}
+                    </div>
+                    <div className="text-xs text-red-200/80 uppercase tracking-widest font-semibold drop-shadow-sm" style={{ fontFamily: 'serif' }}>
+                      Nota da Vergonha
+                    </div>
+                  </div>
+
+                  {/* Date */}
+                  <div className="text-xs text-red-300/60 mt-2">
+                    {new Date(serverBagre.matchDate).toLocaleDateString('pt-BR')}
+                  </div>
+
+                  {/* Decorative elements */}
+                  <div className="absolute bottom-0 left-0 w-3 h-3 border-l-2 border-b-2 border-red-500/40"></div>
+                  <div className="absolute bottom-0 right-0 w-3 h-3 border-r-2 border-b-2 border-red-500/40"></div>
+                  
+                  {/* Shame particles */}
+                  <div className="absolute top-2 right-2 w-1 h-1 bg-red-400 rounded-full animate-ping"></div>
+                  <div className="absolute bottom-3 left-3 w-1 h-1 bg-orange-400 rounded-full animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                </div>
+              </div>
             </div>
           )}
         </div>

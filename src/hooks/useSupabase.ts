@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase, DatabasePlayer, DatabaseMatch, DatabaseMatchParticipant } from '../lib/supabase';
-import { Player, MatchFormData, Match, MatchParticipant, LaneLeader, Lane } from '../types';
+import { Player, MatchFormData, Match, MatchParticipant, LaneLeader, Lane, ServerBagre } from '../types';
 
 export function useSupabase() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [laneLeaders, setLaneLeaders] = useState<LaneLeader[]>([]);
+  const [serverBagre, setServerBagre] = useState<ServerBagre | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetch, setLastFetch] = useState<number>(0);
@@ -92,6 +93,81 @@ export function useSupabase() {
     }
   };
 
+  // Buscar o bagre do servidor (menor nota)
+  const fetchServerBagre = async () => {
+    try {
+      // Primeiro, verificar se há partidas registradas
+      const { count } = await supabase
+        .from('match_participants')
+        .select('*', { count: 'exact', head: true });
+
+      if (!count || count === 0) {
+        console.log('Nenhuma partida encontrada para calcular bagre');
+        return;
+      }
+
+      // Buscar o participante com a menor nota
+      const { data: participantData, error: participantError } = await supabase
+        .from('match_participants')
+        .select('rating, player_id, created_at, match_id')
+        .order('rating', { ascending: true })
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (participantError || !participantData) {
+        console.warn('Nenhum bagre encontrado:', participantError);
+        return;
+      }
+
+      console.log('Dados do participante bagre:', participantData);
+
+      // Buscar dados do jogador
+      const { data: playerData, error: playerError } = await supabase
+        .from('players')
+        .select('name, avatar')
+        .eq('id', participantData.player_id)
+        .single();
+
+      if (playerError || !playerData) {
+        console.error('Erro ao buscar dados do jogador bagre:', playerError);
+        return;
+      }
+
+      console.log('Dados do jogador bagre:', playerData);
+
+      // Buscar dados da partida
+      const { data: matchData } = await supabase
+        .from('matches')
+        .select('match_date')
+        .eq('id', participantData.match_id)
+        .single();
+
+      console.log('Dados da partida bagre:', matchData);
+
+      // Garantir que temos todos os dados necessários
+      if (playerData && playerData.name) {
+        const avatarUrl = playerData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(playerData.name)}`;
+        
+        const bagreData = {
+          playerId: participantData.player_id,
+          playerName: playerData.name,
+          playerAvatar: avatarUrl,
+          worstRating: participantData.rating,
+          matchDate: matchData?.match_date || participantData.created_at
+        };
+        
+        console.log('Avatar URL do bagre:', avatarUrl);
+        console.log('Definindo bagre com dados completos:', bagreData);
+        setServerBagre(bagreData);
+      } else {
+        console.error('Dados incompletos do jogador para o bagre:', playerData);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar bagre do servidor:', err);
+    }
+  };
+
   // Carregar jogadores do Supabase com retry e cache
   const fetchPlayers = async (forceRefresh = false) => {
     // Verificar cache
@@ -118,8 +194,9 @@ export function useSupabase() {
       const convertedPlayers = data.map(convertDatabasePlayerToPlayer);
       setPlayers(convertedPlayers);
       
-      // Carregar líderes de lane também com retry
+      // Carregar líderes de lane e bagre também com retry
       await retryWithBackoff(() => fetchLaneLeaders());
+      await retryWithBackoff(() => fetchServerBagre());
       
       setLastFetch(now);
     } catch (err) {
@@ -270,6 +347,7 @@ export function useSupabase() {
   return {
     players,
     laneLeaders,
+    serverBagre,
     loading,
     error,
     addMatch,
