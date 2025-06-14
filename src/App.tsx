@@ -11,6 +11,16 @@ function App() {
   const { players, laneLeaders, loading, error, addMatch, resetPlayerStats, refetch } = useSupabase();
   const [showResetPassword, setShowResetPassword] = React.useState(false);
 
+  // Error boundary básico
+  React.useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error('Erro capturado:', event.error);
+    };
+    
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
   // Função para obter ícone da lane
   const getLaneIcon = (lane: string) => {
     switch (lane) {
@@ -107,9 +117,23 @@ function App() {
     );
   }
 
-  // Error state - Mostrar diagnóstico detalhado
+  // Error state - Fallback mais simples
   if (error) {
-    return <SupabaseTest />;
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center p-8">
+          <h1 className="text-4xl font-bold text-red-400 mb-4">Erro de Conexão</h1>
+          <p className="text-gray-300 mb-4">Não foi possível conectar ao banco de dados.</p>
+          <p className="text-gray-500 text-sm">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors"
+          >
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
