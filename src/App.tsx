@@ -9,7 +9,7 @@ import { PasswordPrompt } from './components/PasswordPrompt';
 import { Crown, Gamepad2, Swords, Loader2, AlertCircle, RefreshCw, Shield, Zap, Star, Target, Heart, TrendingDown } from 'lucide-react';
 
 function App() {
-  const { players, laneLeaders, serverBagre, loading, error, addMatch, resetPlayerStats, refetch } = useSupabase();
+  const { players, laneLeaders, serverBagre, worstKDA, loading, error, addMatch, resetPlayerStats, refetch } = useSupabase();
   const [showResetPassword, setShowResetPassword] = React.useState(false);
 
   // Parâmetro de suavização da Média Bayesiana
@@ -225,38 +225,7 @@ function App() {
           </div>
         </div>
 
-        {/* Bayesian Average Info */}
-        <div className="max-w-4xl mx-auto mb-8 md:mb-12">
-          <div className="bg-gradient-to-r from-blue-900/20 via-purple-900/20 to-blue-900/20 rounded-xl p-4 md:p-6 border border-blue-500/30 backdrop-blur-sm">
-            <div className="flex items-center space-x-3 mb-3">
-              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-              <h3 className="text-lg md:text-xl font-bold text-blue-300">Sistema de Média Bayesiana</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm md:text-base">
-              <div className="space-y-2">
-                <p className="text-gray-300">
-                  <span className="font-semibold text-blue-400">O que é:</span> Jogadores com poucas partidas têm seu score "puxado" para perto da média geral ({(() => {
-                    const playersWithMatches = players.filter(p => p.totalMatches > 0);
-                    return playersWithMatches.length > 0 
-                      ? (playersWithMatches.reduce((sum, p) => sum + p.averageRating, 0) / playersWithMatches.length).toFixed(1)
-                      : '5.0';
-                  })()}).
-                </p>
-                <p className="text-gray-300">
-                  <span className="font-semibold text-green-400">Benefício:</span> Evita que jogadores com 1-2 partidas excelentes fiquem no topo sem ter provado consistência.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <p className="text-gray-300">
-                  <span className="font-semibold text-purple-400">Fórmula:</span> <span className="font-mono text-sm bg-black/30 px-2 py-1 rounded">Score = (Média Geral × {BAYESIAN_WEIGHT} + Sua Média × Suas Partidas) / ({BAYESIAN_WEIGHT} + Suas Partidas)</span>
-                </p>
-                <p className="text-gray-300">
-                  <span className="font-semibold text-yellow-400">Peso:</span> {BAYESIAN_WEIGHT} partidas virtuais (suavização equilibrada).
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+
 
         {/* Lane Leaders */}
         {laneLeaders.length > 0 && (
@@ -451,8 +420,9 @@ function App() {
                 <div className="w-2 h-8 bg-gradient-to-b from-red-500 via-orange-500 to-red-600 rounded-full"></div>
               </div>
               
-              <div className="flex justify-center">
-                <div className="relative max-w-lg w-full mx-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 max-w-7xl mx-auto px-4">
+                {/* Card do Bagre do Servidor */}
+                <div className="relative max-w-lg w-full mx-auto">
                   {/* Background with animated gradients */}
                   <div className="absolute inset-0 bg-gradient-to-br from-red-900/90 via-orange-900/90 to-red-800/90 rounded-2xl blur-sm"></div>
                   <div className="absolute inset-0 bg-gradient-to-tr from-red-800/50 via-orange-800/50 to-red-700/50 rounded-2xl animate-pulse"></div>
@@ -528,8 +498,8 @@ function App() {
                         </p>
                       </div>
 
-                      {/* Stats grid */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      {/* Stats grid - Para manter altura similar ao outro card */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                         {/* Rating card */}
                         <div className="bg-gradient-to-br from-red-800/60 to-orange-800/60 rounded-xl p-4 border border-red-500/30 text-center">
                           <div className="text-3xl font-bold text-red-200 mb-1">
@@ -537,6 +507,16 @@ function App() {
                           </div>
                           <div className="text-xs text-red-300/80 uppercase tracking-widest font-semibold">
                             Nota Histórica
+                          </div>
+                        </div>
+                        
+                        {/* Spacer para alinhamento */}
+                        <div className="bg-gradient-to-br from-red-800/30 to-orange-800/30 rounded-xl p-4 border border-red-500/20 text-center">
+                          <div className="text-lg font-bold text-red-200/60 mb-1">
+                            💀
+                          </div>
+                          <div className="text-xs text-red-300/60 uppercase tracking-widest font-semibold">
+                            Hall Fame
                           </div>
                         </div>
                         
@@ -549,6 +529,11 @@ function App() {
                             Data do Feito
                           </div>
                         </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 mb-6">
+                        {/* Placeholder para manter altura */}
+                        <div className="h-16"></div>
                       </div>
 
                       {/* Shame messages */}
@@ -595,6 +580,183 @@ function App() {
                     <div className="absolute inset-0 bg-gradient-to-br from-red-500/0 to-orange-500/0 group-hover:from-red-500/20 group-hover:to-orange-500/20 rounded-2xl transition-all duration-500 pointer-events-none"></div>
                   </div>
                 </div>
+
+                {/* Card do Pior KDA Registrado */}
+                {worstKDA && (
+                  <div className="relative max-w-lg w-full mx-auto">
+                    {/* Background with animated gradients */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-red-900/90 via-orange-900/90 to-red-800/90 rounded-2xl blur-sm"></div>
+                    <div className="absolute inset-0 bg-gradient-to-tr from-red-800/50 via-orange-800/50 to-red-700/50 rounded-2xl animate-pulse"></div>
+                    
+                    {/* Main card */}
+                    <div className="relative bg-gradient-to-br from-red-900/95 via-orange-900/95 to-red-800/95 backdrop-blur-md rounded-2xl border-2 border-red-500/60 shadow-2xl shadow-red-500/30 overflow-hidden group animate-shame-glow hover:scale-105 transition-transform duration-500">
+                      
+                      {/* Floating particles */}
+                      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                        {[...Array(8)].map((_, i) => (
+                          <div
+                            key={i}
+                            className="absolute w-1 h-1 bg-red-400/60 rounded-full animate-floating-particle"
+                            style={{
+                              left: `${Math.random() * 100}%`,
+                              top: `${Math.random() * 100}%`,
+                              animationDelay: `${Math.random() * 3}s`,
+                              animationDuration: `${3 + Math.random() * 2}s`
+                            }}
+                          ></div>
+                        ))}
+                      </div>
+
+                      {/* Header section */}
+                      <div className="relative z-10 bg-gradient-to-r from-red-800/80 to-orange-800/80 p-4 border-b-2 border-red-500/40 animate-degradation-pulse">
+                        <div className="flex items-center justify-center space-x-2">
+                          <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+                            <span className="text-white text-sm font-bold">⚔️</span>
+                          </div>
+                          <h3 className="text-lg font-bold text-red-100 uppercase tracking-wide">
+                            Pior KDA Registrado
+                          </h3>
+                          <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+                            <span className="text-white text-sm font-bold">⚔️</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Player info section */}
+                      <div className="relative z-10 p-6">
+                        {/* Avatar section with robust fallback */}
+                        <div className="flex flex-col items-center mb-6">
+                          <div className="relative mb-4">
+                            {/* Animated rings */}
+                            <div className="absolute -inset-8 border-2 border-red-500/30 rounded-full animate-spin" style={{ animationDuration: '8s' }}></div>
+                            <div className="absolute -inset-6 border-2 border-orange-500/40 rounded-full animate-spin" style={{ animationDuration: '6s', animationDirection: 'reverse' }}></div>
+                            <div className="absolute -inset-4 border-2 border-red-400/50 rounded-full animate-pulse"></div>
+                            
+                            {/* Avatar container */}
+                            <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-red-500 to-orange-600 p-1 shadow-2xl shadow-red-500/50">
+                              <div className="w-full h-full rounded-full bg-slate-900 p-1 overflow-hidden">
+                                <PlayerAvatar 
+                                  playerName={worstKDA.playerName}
+                                  playerAvatar={worstKDA.playerAvatar}
+                                  size="w-full h-full"
+                                  className="rounded-full object-cover filter grayscale hover:grayscale-0 transition-all duration-500 contrast-110"
+                                />
+                              </div>
+                            </div>
+                            
+                            {/* Shame badge */}
+                            <div className="absolute -bottom-2 -right-2 bg-red-600 text-white text-xs font-bold px-3 py-1 rounded-full border-2 border-red-400 shadow-lg animate-shame-badge">
+                              FEEDS
+                            </div>
+                          </div>
+                          
+                          {/* Player name */}
+                          <h3 className="text-2xl font-bold text-red-100 mb-2 text-center">
+                            {worstKDA.playerName}
+                          </h3>
+                          <p className="text-red-300/80 text-sm font-semibold italic mb-4">
+                            "O Mestre dos Feeds"
+                          </p>
+                        </div>
+
+                        {/* Stats grid */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                          {/* KDA card */}
+                          <div className="bg-gradient-to-br from-red-800/60 to-orange-800/60 rounded-xl p-4 border border-red-500/30 text-center">
+                            <div className="text-lg font-bold text-green-200 mb-1">
+                              {worstKDA.kills}
+                            </div>
+                            <div className="text-xs text-green-300/80 uppercase tracking-widest font-semibold">
+                              Kills
+                            </div>
+                          </div>
+                          
+                          <div className="bg-gradient-to-br from-orange-800/60 to-red-800/60 rounded-xl p-4 border border-orange-500/30 text-center">
+                            <div className="text-lg font-bold text-red-200 mb-1">
+                              {worstKDA.deaths}
+                            </div>
+                            <div className="text-xs text-red-300/80 uppercase tracking-widest font-semibold">
+                              Deaths
+                            </div>
+                          </div>
+                          
+                          <div className="bg-gradient-to-br from-red-800/60 to-orange-800/60 rounded-xl p-4 border border-blue-500/30 text-center">
+                            <div className="text-lg font-bold text-blue-200 mb-1">
+                              {worstKDA.assists}
+                            </div>
+                            <div className="text-xs text-blue-300/80 uppercase tracking-widest font-semibold">
+                              Assists
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                          {/* KDA Ratio card */}
+                          <div className="bg-gradient-to-br from-red-800/60 to-orange-800/60 rounded-xl p-4 border border-red-500/30 text-center">
+                            <div className="text-3xl font-bold text-red-200 mb-1">
+                              {worstKDA.kdRatio.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-red-300/80 uppercase tracking-widest font-semibold">
+                              KDA Ratio
+                            </div>
+                          </div>
+                          
+                          {/* Date card */}
+                          <div className="bg-gradient-to-br from-orange-800/60 to-red-800/60 rounded-xl p-4 border border-orange-500/30 text-center">
+                            <div className="text-sm font-bold text-orange-200 mb-1">
+                              {new Date(worstKDA.matchDate).toLocaleDateString('pt-BR')}
+                            </div>
+                            <div className="text-xs text-orange-300/80 uppercase tracking-widest font-semibold">
+                              Data do Feito
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Shame messages */}
+                        <div className="space-y-3">
+                          <div className="bg-black/30 rounded-lg p-4 border border-red-500/20">
+                            <div className="flex items-start space-x-3">
+                              <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-white text-xs font-bold">!</span>
+                              </div>
+                              <div>
+                                <p className="text-red-200 text-sm font-semibold mb-1">Alerta do Sistema</p>
+                                <p className="text-red-300/90 text-xs">
+                                  KDA tão épico que quebrou os limites conhecidos da matemática. Um feito que entrará para a história.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="bg-red-900/30 rounded-lg p-3 border border-red-500/20">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-red-400 text-sm">💀</span>
+                                <div>
+                                  <p className="text-red-200 text-xs font-semibold">Conquista Desbloqueada</p>
+                                  <p className="text-red-300/80 text-xs">"Feed Master"</p>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <div className="bg-orange-900/30 rounded-lg p-3 border border-orange-500/20">
+                              <div className="flex items-center space-x-2">
+                                <span className="text-orange-400 text-sm">⚔️</span>
+                                <div>
+                                  <p className="text-orange-200 text-xs font-semibold">Status Atual</p>
+                                  <p className="text-orange-300/80 text-xs">"Legendary Feeder"</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Glow effect on hover */}
+                      <div className="absolute inset-0 bg-gradient-to-br from-red-500/0 to-orange-500/0 group-hover:from-red-500/20 group-hover:to-orange-500/20 rounded-2xl transition-all duration-500 pointer-events-none"></div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

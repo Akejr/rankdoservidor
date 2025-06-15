@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase, DatabasePlayer, DatabaseMatch, DatabaseMatchParticipant } from '../lib/supabase';
-import { Player, MatchFormData, Match, MatchParticipant, LaneLeader, Lane, ServerBagre } from '../types';
+import { Player, MatchFormData, Match, MatchParticipant, LaneLeader, Lane, ServerBagre, WorstKDA } from '../types';
 
 export function useSupabase() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [laneLeaders, setLaneLeaders] = useState<LaneLeader[]>([]);
   const [serverBagre, setServerBagre] = useState<ServerBagre | null>(null);
+  const [worstKDA, setWorstKDA] = useState<WorstKDA | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetch, setLastFetch] = useState<number>(0);
@@ -168,6 +169,100 @@ export function useSupabase() {
     }
   };
 
+  // Buscar o pior KDA do servidor
+  const fetchWorstKDA = async () => {
+    try {
+      // Primeiro, verificar se há partidas registradas
+      const { count } = await supabase
+        .from('match_participants')
+        .select('*', { count: 'exact', head: true });
+
+      if (!count || count === 0) {
+        console.log('Nenhuma partida encontrada para calcular pior KDA');
+        return;
+      }
+
+      // Buscar todas as partidas e calcular KD ratio
+      const { data: allParticipants, error: participantsError } = await supabase
+        .from('match_participants')
+        .select('kills, deaths, assists, player_id, created_at, match_id');
+
+      if (participantsError || !allParticipants) {
+        console.warn('Erro ao buscar participantes para KDA:', participantsError);
+        return;
+      }
+
+      // Calcular KDA ratio para cada participante e encontrar o pior
+      let worstKDAParticipant = null;
+      let worstKDARatio = Infinity;
+
+      for (const participant of allParticipants) {
+        // Para evitar divisão por zero, consideramos pelo menos 1 death
+        const deaths = Math.max(participant.deaths, 1);
+        const kdaRatio = (participant.kills + participant.assists) / deaths;
+        
+        // Se o KDA ratio é pior (menor) que o atual pior, atualizar
+        if (kdaRatio < worstKDARatio) {
+          worstKDARatio = kdaRatio;
+          worstKDAParticipant = participant;
+        }
+      }
+
+      if (!worstKDAParticipant) {
+        console.warn('Nenhum pior KDA encontrado');
+        return;
+      }
+
+      console.log('Dados do participante com pior KDA:', worstKDAParticipant);
+
+      // Buscar dados do jogador
+      const { data: playerData, error: playerError } = await supabase
+        .from('players')
+        .select('name, avatar')
+        .eq('id', worstKDAParticipant.player_id)
+        .single();
+
+      if (playerError || !playerData) {
+        console.error('Erro ao buscar dados do jogador com pior KDA:', playerError);
+        return;
+      }
+
+      console.log('Dados do jogador com pior KDA:', playerData);
+
+      // Buscar dados da partida
+      const { data: matchData } = await supabase
+        .from('matches')
+        .select('match_date')
+        .eq('id', worstKDAParticipant.match_id)
+        .single();
+
+      console.log('Dados da partida do pior KDA:', matchData);
+
+      // Garantir que temos todos os dados necessários
+      if (playerData && playerData.name) {
+        const avatarUrl = playerData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(playerData.name)}`;
+        
+        const worstKDAData = {
+          playerId: worstKDAParticipant.player_id,
+          playerName: playerData.name,
+          playerAvatar: avatarUrl,
+          kills: worstKDAParticipant.kills,
+          deaths: worstKDAParticipant.deaths,
+          assists: worstKDAParticipant.assists,
+          kdRatio: worstKDARatio,
+          matchDate: matchData?.match_date || worstKDAParticipant.created_at
+        };
+        
+        console.log('Definindo pior KDA com dados completos:', worstKDAData);
+        setWorstKDA(worstKDAData);
+      } else {
+        console.error('Dados incompletos do jogador para o pior KDA:', playerData);
+      }
+    } catch (err) {
+      console.error('Erro ao carregar pior KDA do servidor:', err);
+    }
+  };
+
   // Carregar jogadores do Supabase com retry e cache
   const fetchPlayers = async (forceRefresh = false) => {
     // Verificar cache
@@ -194,9 +289,10 @@ export function useSupabase() {
       const convertedPlayers = data.map(convertDatabasePlayerToPlayer);
       setPlayers(convertedPlayers);
       
-      // Carregar líderes de lane e bagre também com retry
+      // Carregar líderes de lane, bagre e pior KDA também com retry
       await retryWithBackoff(() => fetchLaneLeaders());
       await retryWithBackoff(() => fetchServerBagre());
+      await retryWithBackoff(() => fetchWorstKDA());
       
       setLastFetch(now);
     } catch (err) {
@@ -348,6 +444,7 @@ export function useSupabase() {
     players,
     laneLeaders,
     serverBagre,
+    worstKDA,
     loading,
     error,
     addMatch,

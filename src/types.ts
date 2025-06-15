@@ -82,3 +82,14 @@ export interface ServerBagre {
   worstRating: number;
   matchDate: string;
 }
+
+export interface WorstKDA {
+  playerId: string;
+  playerName: string;
+  playerAvatar: string;
+  kills: number;
+  deaths: number;
+  assists: number;
+  kdRatio: number;
+  matchDate: string;
+}
