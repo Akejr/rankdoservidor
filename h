@@ -1,0 +1,5 @@
+[33m7042c23[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m feat: adiciona card do pior KDA registrado no Hall da Vergonha - Adiciona novo card do pior KDA registrado ao lado do bagre do servidor - Corrige calculo do KDA ratio para incluir assistencias: (K+A)/D - Simplifica interface removendo referencias ao score bayesiano - Exibe apenas SCORE ao inves de Score Bayesiano e score real - Cards do Hall da Vergonha agora ficam lado a lado em layout responsivo - Equaliza altura dos cards para visual consistente
+[33mf9483b7[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: Implementa Média Bayesiana e refaz card do bagre profissionalmente - Sistema de Média Bayesiana implementado - Card do bagre redesenhado com componente PlayerAvatar robusto - Animações profissionais e efeitos visuais elegantes - Temporada atualizada para 2025
+[33mf278df2[m Atualizações no sistema de ranking
+[33m3c61046[m Fix: Bagre do servidor - melhorar fallback da foto com avatar padrão de iniciais
+[33m746f62e[m fix: usar caminhos relativos para assets - resolver tela branca GitHub Pages

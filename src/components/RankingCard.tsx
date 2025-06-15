@@ -1,13 +1,16 @@
 import React from 'react';
 import { Player } from '../types';
+import { Crown } from 'lucide-react';
 import { Trophy, TrendingUp, TrendingDown, Sword, Shield, Target } from 'lucide-react';
 
 interface RankingCardProps {
   player: Player;
   rank: number;
+  onPlayerClick?: (player: Player) => void;
+  mvpCount?: number;
 }
 
-export const RankingCard: React.FC<RankingCardProps> = ({ player, rank }) => {
+export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayerClick, mvpCount = 0 }) => {
   const getRankStyle = (rank: number) => {
     switch (rank) {
       case 1: 
@@ -81,7 +84,8 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank }) => {
               <img 
                 src={player.avatar} 
                 alt={player.name}
-                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-blue-500/60 shadow-lg"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full border-2 border-blue-500/60 shadow-lg cursor-pointer hover:scale-110 transition-transform duration-200"
+                onClick={() => onPlayerClick?.(player)}
               />
               <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-green-400 rounded-full border border-black shadow-lg animate-pulse"></div>
               {rank <= 3 && (
@@ -94,7 +98,26 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank }) => {
             {/* Player Info */}
             <div className="flex-1 min-w-0">
               <h3 className="text-lg sm:text-xl font-bold text-white truncate">{player.name}</h3>
-              <p className="text-xs text-gray-400">{player.totalMatches} {player.totalMatches === 1 ? 'batalha' : 'batalhas'}</p>
+              <div className="flex items-center space-x-3">
+                <p className="text-xs text-gray-400">{player.totalMatches} {player.totalMatches === 1 ? 'partida' : 'partidas'}</p>
+                <div className={`flex items-center space-x-1 px-2 py-0.5 rounded-full border shadow-sm transition-all duration-300 relative ${
+                  mvpCount >= 10 
+                    ? 'bg-gradient-to-r from-yellow-500/40 to-amber-400/40 border-yellow-300/50 shadow-yellow-500/20 animate-pulse' 
+                    : mvpCount >= 5 
+                    ? 'bg-gradient-to-r from-yellow-700/40 to-amber-700/40 border-yellow-400/40 shadow-yellow-500/10' 
+                    : 'bg-yellow-900/30 border-yellow-500/30'
+                }`}>
+                  {mvpCount >= 10 && (
+                    <div className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-yellow-400 rounded-full animate-ping"></div>
+                  )}
+                  <Crown className={`w-3 h-3 ${
+                    mvpCount >= 10 ? 'text-yellow-200' : mvpCount >= 5 ? 'text-yellow-300' : 'text-yellow-400'
+                  }`} />
+                  <span className={`text-xs font-bold ${
+                    mvpCount >= 10 ? 'text-yellow-100' : mvpCount >= 5 ? 'text-yellow-200' : 'text-yellow-400'
+                  }`}>{mvpCount}</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -142,7 +165,8 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank }) => {
               <img 
                 src={player.avatar} 
                 alt={player.name}
-                className="w-16 h-16 rounded-full border-3 border-blue-500/60 shadow-lg"
+                className="w-16 h-16 rounded-full border-3 border-blue-500/60 shadow-lg cursor-pointer hover:scale-110 transition-transform duration-200"
+                onClick={() => onPlayerClick?.(player)}
               />
               <div className="absolute inset-0 w-16 h-16 rounded-full bg-gradient-to-tr from-blue-500/20 to-purple-500/20"></div>
             </div>
@@ -158,10 +182,32 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank }) => {
           {/* Player Info */}
           <div>
             <h3 className="text-2xl font-bold text-white mb-1">{player.name}</h3>
-            <div className="flex items-center space-x-4 text-sm text-gray-400">
-              <span>{player.totalMatches} {player.totalMatches === 1 ? 'batalha' : 'batalhas'}</span>
+            <div className="flex items-center space-x-4 text-sm">
+              <span className="text-gray-400">{player.totalMatches} {player.totalMatches === 1 ? 'partida' : 'partidas'}</span>
               <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
-              <span>Invocador Ativo</span>
+              <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border shadow-lg transition-all duration-300 relative ${
+                mvpCount >= 10 
+                  ? 'bg-gradient-to-r from-yellow-500/50 to-amber-400/50 border-yellow-300/60 shadow-yellow-500/30 animate-pulse' 
+                  : mvpCount >= 5
+                  ? 'bg-gradient-to-r from-yellow-600/50 to-amber-500/50 border-yellow-400/50 shadow-yellow-500/20'
+                  : 'bg-gradient-to-r from-yellow-900/40 to-amber-900/40 border-yellow-500/40'
+              }`}>
+                {mvpCount >= 10 && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-400/20 to-amber-400/20 rounded-full blur-sm"></div>
+                )}
+                <Crown className={`w-4 h-4 relative z-10 ${
+                  mvpCount >= 10 ? 'text-yellow-200' : mvpCount >= 5 ? 'text-yellow-300' : 'text-yellow-400'
+                }`} />
+                <span className={`font-bold relative z-10 ${
+                  mvpCount >= 10 ? 'text-yellow-100 text-lg' : mvpCount >= 5 ? 'text-yellow-200' : 'text-yellow-400'
+                }`}>{mvpCount}</span>
+                <span className={`text-xs font-semibold uppercase tracking-wide relative z-10 ${
+                  mvpCount >= 10 ? 'text-yellow-200' : mvpCount >= 5 ? 'text-yellow-300' : 'text-yellow-300'
+                }`}>{mvpCount === 1 ? 'MVP' : 'MVPs'}</span>
+                {mvpCount >= 10 && (
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
+                )}
+              </div>
             </div>
           </div>
         </div>

@@ -3,7 +3,10 @@ import { Player, MatchFormData, Match, MatchParticipant } from './types';
 import { RankingCard } from './components/RankingCard';
 import { AdminPanel } from './components/AdminPanel';
 import { PlayerAvatar } from './components/PlayerAvatar';
+import { PlayerDetailPage } from './components/PlayerDetailPage';
+import { MatchHistoryModal } from './components/MatchHistoryModal';
 import { useSupabase } from './hooks/useSupabase';
+import { supabase } from './lib/supabase';
 import { SupabaseTest } from './components/SupabaseTest';
 import { PasswordPrompt } from './components/PasswordPrompt';
 import { Crown, Gamepad2, Swords, Loader2, AlertCircle, RefreshCw, Shield, Zap, Star, Target, Heart, TrendingDown } from 'lucide-react';
@@ -11,6 +14,9 @@ import { Crown, Gamepad2, Swords, Loader2, AlertCircle, RefreshCw, Shield, Zap, 
 function App() {
   const { players, laneLeaders, serverBagre, worstKDA, loading, error, addMatch, resetPlayerStats, refetch } = useSupabase();
   const [showResetPassword, setShowResetPassword] = React.useState(false);
+  const [selectedPlayer, setSelectedPlayer] = React.useState<Player | null>(null);
+  const [showMatchHistory, setShowMatchHistory] = React.useState(false);
+  const [mvpCounts, setMvpCounts] = React.useState<Map<string, number>>(new Map());
 
   // Parâmetro de suavização da Média Bayesiana
   const BAYESIAN_WEIGHT = 5; // Número de "partidas virtuais"
@@ -38,6 +44,66 @@ function App() {
       console.log('Nome do bagre:', serverBagre.playerName);
     }
   }, [serverBagre]);
+
+  // Calcular MVPs
+  React.useEffect(() => {
+    if (players.length > 0) {
+      calculateMVPs();
+    }
+  }, [players]);
+
+  const calculateMVPs = async () => {
+    try {
+      const { data: allMatchesData, error: allMatchesError } = await supabase
+        .from('match_participants')
+        .select(`
+          player_id,
+          rating,
+          match_id,
+          players (
+            name,
+            avatar
+          )
+        `);
+
+      if (allMatchesError) {
+        console.error('Erro ao buscar dados para MVP:', allMatchesError);
+        return;
+      }
+
+      // Agrupar participantes por match_id
+      const matchGroups = new Map<string, any[]>();
+      
+      allMatchesData?.forEach((participant: any) => {
+        const matchId = participant.match_id;
+        if (!matchGroups.has(matchId)) {
+          matchGroups.set(matchId, []);
+        }
+        matchGroups.get(matchId)!.push({
+          playerId: participant.player_id,
+          rating: participant.rating
+        });
+      });
+
+      const newMvpCounts = new Map<string, number>();
+
+      // Para cada partida, encontrar o MVP
+      matchGroups.forEach((participants) => {
+        if (participants.length === 0) return;
+
+        const mvp = participants.reduce((prev: any, current: any) => 
+          prev.rating > current.rating ? prev : current
+        );
+
+        const currentCount = newMvpCounts.get(mvp.playerId) || 0;
+        newMvpCounts.set(mvp.playerId, currentCount + 1);
+      });
+
+      setMvpCounts(newMvpCounts);
+    } catch (error) {
+      console.error('Erro ao calcular MVPs:', error);
+    }
+  };
 
   // Função para obter ícone da lane
   const getLaneIcon = (lane: string) => {
@@ -308,7 +374,11 @@ function App() {
                                <img
                                  src={leader.playerAvatar}
                                  alt={leader.playerName}
-                                 className="w-14 h-14 rounded-full shadow-2xl relative z-30"
+                                 className="w-14 h-14 rounded-full shadow-2xl relative z-30 cursor-pointer hover:scale-110 transition-transform duration-200"
+                                 onClick={() => {
+                                   const player = players.find(p => p.id === leader.playerId);
+                                   if (player) setSelectedPlayer(player);
+                                 }}
                                />
                              </div>
                            </div>
@@ -357,12 +427,14 @@ function App() {
               <h2 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">CLASSIFICAÇÃO ATUAL</h2>
             </div>
             <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
-              <div className="text-xs sm:text-sm text-gray-400 bg-gray-900/50 px-3 sm:px-4 py-2 rounded-lg border border-gray-700/50">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                  <span>Conectado ao Supabase</span>
-                </div>
-              </div>
+              <button
+                onClick={() => setShowMatchHistory(true)}
+                className="text-xs sm:text-sm text-blue-400 hover:text-blue-300 bg-blue-900/20 px-3 sm:px-4 py-2 rounded-lg border border-blue-700/30 transition-colors flex items-center space-x-2"
+                title="Ver histórico de partidas"
+              >
+                <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                <span>Histórico</span>
+              </button>
 
               {/* Refresh Button */}
               <button
@@ -393,6 +465,8 @@ function App() {
                 key={player.id}
                 player={player}
                 rank={index + 1}
+                onPlayerClick={setSelectedPlayer}
+                mvpCount={mvpCounts.get(player.id) || 0}
               />
             ))}
           </div>
@@ -474,12 +548,20 @@ function App() {
                           {/* Avatar container */}
                           <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-red-500 to-orange-600 p-1 shadow-2xl shadow-red-500/50">
                             <div className="w-full h-full rounded-full bg-slate-900 p-1 overflow-hidden">
-                              <PlayerAvatar 
-                                playerName={serverBagre.playerName}
-                                playerAvatar={serverBagre.playerAvatar}
-                                size="w-full h-full"
-                                className="rounded-full object-cover filter grayscale hover:grayscale-0 transition-all duration-500 contrast-110"
-                              />
+                                                              <div 
+                                  className="cursor-pointer w-full h-full" 
+                                  onClick={() => {
+                                    const player = players.find(p => p.id === serverBagre.playerId);
+                                    if (player) setSelectedPlayer(player);
+                                  }}
+                                >
+                                  <PlayerAvatar 
+                                    playerName={serverBagre.playerName}
+                                    playerAvatar={serverBagre.playerAvatar}
+                                    size="w-full h-full"
+                                    className="rounded-full object-cover filter grayscale hover:grayscale-0 transition-all duration-500 contrast-110 hover:scale-105"
+                                  />
+                                </div>
                             </div>
                           </div>
                           
@@ -635,12 +717,20 @@ function App() {
                             {/* Avatar container */}
                             <div className="relative w-32 h-32 rounded-full bg-gradient-to-br from-red-500 to-orange-600 p-1 shadow-2xl shadow-red-500/50">
                               <div className="w-full h-full rounded-full bg-slate-900 p-1 overflow-hidden">
-                                <PlayerAvatar 
-                                  playerName={worstKDA.playerName}
-                                  playerAvatar={worstKDA.playerAvatar}
-                                  size="w-full h-full"
-                                  className="rounded-full object-cover filter grayscale hover:grayscale-0 transition-all duration-500 contrast-110"
-                                />
+                                <div 
+                                  className="cursor-pointer w-full h-full" 
+                                  onClick={() => {
+                                    const player = players.find(p => p.id === worstKDA.playerId);
+                                    if (player) setSelectedPlayer(player);
+                                  }}
+                                >
+                                  <PlayerAvatar 
+                                    playerName={worstKDA.playerName}
+                                    playerAvatar={worstKDA.playerAvatar}
+                                    size="w-full h-full"
+                                    className="rounded-full object-cover filter grayscale hover:grayscale-0 transition-all duration-500 contrast-110 hover:scale-105"
+                                  />
+                                </div>
                               </div>
                             </div>
                             
@@ -773,6 +863,23 @@ function App() {
         onConfirm={resetPlayerStats}
         title="Reset Debug"
         description="Esta ação vai resetar todos os dados do ranking"
+      />
+
+      {/* Modal da Página Individual do Jogador */}
+      {selectedPlayer && (
+        <PlayerDetailPage
+          player={selectedPlayer}
+          allPlayers={players}
+          onClose={() => setSelectedPlayer(null)}
+        />
+      )}
+
+      {/* Modal do Histórico de Partidas */}
+      <MatchHistoryModal
+        isOpen={showMatchHistory}
+        onClose={() => setShowMatchHistory(false)}
+        onPlayerClick={setSelectedPlayer}
+        players={players}
       />
     </div>
   );

@@ -10,6 +10,7 @@ import {
 interface AdminPanelProps {
   players: Player[];
   onAddMatch: (matchData: MatchFormData) => void;
+  onPlayerClick?: (player: Player) => void;
 }
 
 interface PlayerSlot {
@@ -23,7 +24,7 @@ interface PlayerSlot {
   lane: Lane;
 }
 
-export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch }) => {
+export const AdminPanel: React.FC<AdminPanelProps> = ({ players, onAddMatch, onPlayerClick }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedPlayers, setSelectedPlayers] = useState<PlayerSlot[]>([]);
