@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Player } from '../types';
 import { Crown } from 'lucide-react';
 import { Trophy, TrendingUp, TrendingDown, Sword, Shield, Target } from 'lucide-react';
@@ -8,9 +9,84 @@ interface RankingCardProps {
   rank: number;
   onPlayerClick?: (player: Player) => void;
   mvpCount?: number;
+  topPlayerScore?: number;
+  globalAverage?: number;
 }
 
-export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayerClick, mvpCount = 0 }) => {
+// Componente de Tooltip
+const Tooltip: React.FC<{ 
+  children: React.ReactNode; 
+  content: string; 
+  show: boolean; 
+  targetRef: React.RefObject<HTMLElement> 
+}> = ({ children, content, show, targetRef }) => {
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (show && targetRef.current) {
+      const rect = targetRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.top - 100, // Mais espaço para o texto da piada
+        left: rect.left + rect.width / 2 // Centralizado
+      });
+    }
+  }, [show, targetRef]);
+
+  if (!show) return <>{children}</>;
+
+  const isImpossible = content === 'impossible';
+
+  return (
+    <>
+      {children}
+      {createPortal(
+        <div 
+          className="fixed pointer-events-none z-[9999] transition-opacity duration-300"
+          style={{ 
+            top: position.top, 
+            left: position.left,
+            transform: 'translateX(-50%)'
+          }}
+        >
+          <div className={`text-white text-sm px-4 py-3 rounded-lg border shadow-2xl ${
+            isImpossible 
+              ? 'bg-red-900 border-red-500 max-w-xs' 
+              : 'bg-gray-900 border-gray-700 whitespace-nowrap'
+          }`}>
+            <div className="text-center">
+              {isImpossible ? (
+                <>
+                  <div className="font-semibold text-red-400 mb-2">🙏 MISSÃO IMPOSSÍVEL 🙏</div>
+                  <div className="text-yellow-300 text-xs leading-relaxed">
+                    Nem com nota 10 você passa o #1!<br/>
+                    Só rezando mesmo... 😅<br/>
+                    <span className="text-red-300">Ou esperar ele jogar mal!</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="font-semibold text-yellow-400 mb-1">Para superar o #1:</div>
+                  <div className="font-bold text-green-400 text-lg">{content}/10</div>
+                  <div className="text-xs text-gray-300">na próxima partida</div>
+                </>
+              )}
+            </div>
+            <div className={`absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent ${
+              isImpossible ? 'border-t-red-900' : 'border-t-gray-900'
+            }`}></div>
+          </div>
+        </div>,
+        document.body
+      )}
+    </>
+  );
+};
+
+export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayerClick, mvpCount = 0, topPlayerScore, globalAverage }) => {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const scoreRefMobile = useRef<HTMLSpanElement>(null);
+  const scoreRefDesktop = useRef<HTMLSpanElement>(null);
+
   const getRankStyle = (rank: number) => {
     switch (rank) {
       case 1: 
@@ -61,6 +137,33 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayer
   const performance = getPerformanceIndicator(player.averageRating);
   const kdRatio = player.averageKDA.deaths > 0 ? (player.averageKDA.kills / player.averageKDA.deaths).toFixed(2) : player.averageKDA.kills.toFixed(2);
 
+  // Calcular diferença de pontos para superar o top 1
+  const calculateScoreDifference = (): number | string | null => {
+    if (!topPlayerScore || rank === 1 || !player.bayesianRating) return null;
+    
+    const currentScore = player.bayesianRating;
+    const scoreDifference = topPlayerScore - currentScore;
+    
+    // Se a diferença for muito grande (mais que 3 pontos), é quase impossível
+    if (scoreDifference > 3) {
+      return 'impossible';
+    }
+    
+    return Math.round(scoreDifference * 100) / 100; // Arredondar para 2 casas decimais
+  };
+
+  const scoreDifference: number | string | null = calculateScoreDifference();
+
+  const getTooltipContent = () => {
+    if (scoreDifference === null) return '';
+    
+    if (scoreDifference === 'impossible') {
+      return '🙏 MISSÃO IMPOSSÍVEL 🙏 A diferença é muito grande! Só rezando mesmo... 😅';
+    }
+    
+    return `Você precisa de ${scoreDifference} pontos a mais no score para passar o #1`;
+  };
+
   return (
     <div className={`${style.bg} ${style.border} ${style.glow} border-2 rounded-2xl p-3 sm:p-4 md:p-6 mb-2 md:mb-3 hover:scale-[1.02] transition-all duration-500 backdrop-blur-sm relative overflow-hidden group`}>
       {/* Rank Glow Effect */}
@@ -98,7 +201,7 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayer
             {/* Player Info */}
             <div className="flex-1 min-w-0">
               <h3 className="text-lg sm:text-xl font-bold text-white truncate">{player.name}</h3>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-3 flex-wrap">
                 <p className="text-xs text-gray-400">{player.totalMatches} {player.totalMatches === 1 ? 'partida' : 'partidas'}</p>
                 <div className={`flex items-center space-x-1 px-2 py-0.5 rounded-full border shadow-sm transition-all duration-300 relative ${
                   mvpCount >= 10 
@@ -117,6 +220,22 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayer
                     mvpCount >= 10 ? 'text-yellow-100' : mvpCount >= 5 ? 'text-yellow-200' : 'text-yellow-400'
                   }`}>{mvpCount}</span>
                 </div>
+                <div className="flex items-center space-x-2 text-xs bg-slate-800/30 px-2 py-1 rounded-lg border border-slate-600/30">
+                  <div className="flex items-center space-x-1">
+                    <span className="text-green-400 font-bold">K</span>
+                    <span className="text-white font-semibold">{player.totalKills}</span>
+                  </div>
+                  <div className="w-px h-3 bg-gray-600"></div>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-red-400 font-bold">M</span>
+                    <span className="text-white font-semibold">{player.totalDeaths}</span>
+                  </div>
+                  <div className="w-px h-3 bg-gray-600"></div>
+                  <div className="flex items-center space-x-1">
+                    <span className="text-blue-400 font-bold">A</span>
+                    <span className="text-white font-semibold">{player.totalAssists}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -124,13 +243,29 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayer
           {/* Mobile Stats */}
           <div className="flex flex-col items-end space-y-1">
             <div className="flex items-center space-x-1">
-              <span className="text-xl sm:text-2xl font-bold text-white">
-                {player.bayesianRating ? player.bayesianRating.toFixed(1) : player.averageRating.toFixed(1)}
-              </span>
+              <Tooltip 
+                content={getTooltipContent()} 
+                show={showTooltip && !!scoreDifference} 
+                targetRef={scoreRefMobile}
+              >
+                <span 
+                  ref={scoreRefMobile}
+                  className="text-xl sm:text-2xl font-bold text-white cursor-help"
+                  onMouseEnter={() => setShowTooltip(true)}
+                  onMouseLeave={() => setShowTooltip(false)}
+                >
+                  {player.bayesianRating ? player.bayesianRating.toFixed(1) : player.averageRating.toFixed(1)}
+                </span>
+              </Tooltip>
               {performance && (
                 <performance.icon className={`w-4 h-4 ${performance.color}`} />
               )}
             </div>
+            {player.bayesianRating && (
+              <div className="text-xs text-gray-400">
+                Média Geral: {player.averageRating.toFixed(1)}
+              </div>
+            )}
 
             <div className="flex items-center space-x-1 text-xs">
               <span className="text-green-400 font-semibold">{player.averageKDA.kills.toFixed(1)}</span>
@@ -138,6 +273,22 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayer
               <span className="text-red-400 font-semibold">{player.averageKDA.deaths.toFixed(1)}</span>
               <span className="text-gray-500">/</span>
               <span className="text-blue-400 font-semibold">{player.averageKDA.assists.toFixed(1)}</span>
+            </div>
+            <div className="flex items-center space-x-1 text-xs bg-slate-800/30 px-2 py-1 rounded border border-slate-600/30">
+              <div className="flex items-center space-x-1">
+                <span className="text-green-400 font-bold text-xs">K</span>
+                <span className="text-white font-semibold text-xs">{player.totalKills}</span>
+              </div>
+              <div className="w-px h-2 bg-gray-600"></div>
+              <div className="flex items-center space-x-1">
+                <span className="text-red-400 font-bold text-xs">M</span>
+                <span className="text-white font-semibold text-xs">{player.totalDeaths}</span>
+              </div>
+              <div className="w-px h-2 bg-gray-600"></div>
+              <div className="flex items-center space-x-1">
+                <span className="text-blue-400 font-bold text-xs">A</span>
+                <span className="text-white font-semibold text-xs">{player.totalAssists}</span>
+              </div>
             </div>
             <div className="text-xs text-purple-300 font-semibold">
               KD: {kdRatio}
@@ -182,7 +333,7 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayer
           {/* Player Info */}
           <div>
             <h3 className="text-2xl font-bold text-white mb-1">{player.name}</h3>
-            <div className="flex items-center space-x-4 text-sm">
+            <div className="flex items-center space-x-4 text-sm flex-wrap">
               <span className="text-gray-400">{player.totalMatches} {player.totalMatches === 1 ? 'partida' : 'partidas'}</span>
               <div className="w-1 h-1 bg-gray-600 rounded-full"></div>
               <div className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border shadow-lg transition-all duration-300 relative ${
@@ -208,6 +359,22 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayer
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
                 )}
               </div>
+              <div className="flex items-center space-x-3 text-sm bg-slate-800/30 px-3 py-1.5 rounded-lg border border-slate-600/30">
+                <div className="flex items-center space-x-1">
+                  <span className="text-green-400 font-bold">K</span>
+                  <span className="text-white font-semibold">{player.totalKills}</span>
+                </div>
+                <div className="w-px h-4 bg-gray-600"></div>
+                <div className="flex items-center space-x-1">
+                  <span className="text-red-400 font-bold">M</span>
+                  <span className="text-white font-semibold">{player.totalDeaths}</span>
+                </div>
+                <div className="w-px h-4 bg-gray-600"></div>
+                <div className="flex items-center space-x-1">
+                  <span className="text-blue-400 font-bold">A</span>
+                  <span className="text-white font-semibold">{player.totalAssists}</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -217,14 +384,30 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayer
           {/* Average Rating */}
           <div className="text-center">
             <div className="flex items-center justify-center space-x-2 mb-1">
-              <span className="text-3xl font-bold text-white">
-                {player.bayesianRating ? player.bayesianRating.toFixed(1) : player.averageRating.toFixed(1)}
-              </span>
+              <Tooltip 
+                content={getTooltipContent()} 
+                show={showTooltip && !!scoreDifference} 
+                targetRef={scoreRefDesktop}
+              >
+                <span 
+                  ref={scoreRefDesktop}
+                  className="text-3xl font-bold text-white cursor-help"
+                  onMouseEnter={() => setShowTooltip(true)}
+                  onMouseLeave={() => setShowTooltip(false)}
+                >
+                  {player.bayesianRating ? player.bayesianRating.toFixed(1) : player.averageRating.toFixed(1)}
+                </span>
+              </Tooltip>
               {performance && (
                 <performance.icon className={`w-5 h-5 ${performance.color}`} />
               )}
             </div>
-            <p className="text-xs text-gray-400 uppercase tracking-wide">Score</p>
+            <p className="text-xs text-gray-400 uppercase tracking-wide">Score Ajustado</p>
+            {player.bayesianRating && (
+              <div className="text-xs text-gray-500 mt-1">
+                Média Geral: {player.averageRating.toFixed(1)}
+              </div>
+            )}
           </div>
 
           {/* KDA */}

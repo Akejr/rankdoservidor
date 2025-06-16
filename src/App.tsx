@@ -5,6 +5,9 @@ import { AdminPanel } from './components/AdminPanel';
 import { PlayerAvatar } from './components/PlayerAvatar';
 import { PlayerDetailPage } from './components/PlayerDetailPage';
 import { MatchHistoryModal } from './components/MatchHistoryModal';
+
+const TipsModal = React.lazy(() => import('./components/TipsModal').then(m => ({ default: m.TipsModal })));
+
 import { useSupabase } from './hooks/useSupabase';
 import { supabase } from './lib/supabase';
 import { SupabaseTest } from './components/SupabaseTest';
@@ -16,6 +19,7 @@ function App() {
   const [showResetPassword, setShowResetPassword] = React.useState(false);
   const [selectedPlayer, setSelectedPlayer] = React.useState<Player | null>(null);
   const [showMatchHistory, setShowMatchHistory] = React.useState(false);
+  const [showTips, setShowTips] = React.useState(false);
   const [mvpCounts, setMvpCounts] = React.useState<Map<string, number>>(new Map());
 
   // Parâmetro de suavização da Média Bayesiana
@@ -165,7 +169,7 @@ function App() {
     }
   };
 
-  const sortedPlayers = useMemo(() => {
+  const { sortedPlayers, globalAverage } = useMemo(() => {
     // Calcular a média geral de todos os jogadores com partidas
     const playersWithMatches = players.filter((player: Player) => player.totalMatches > 0);
     const globalAverage = playersWithMatches.length > 0 
@@ -189,7 +193,10 @@ function App() {
     
     const playersWithoutMatches = players.filter((player: Player) => player.totalMatches === 0);
     
-    return [...sortedPlayersWithMatches, ...playersWithoutMatches];
+    return {
+      sortedPlayers: [...sortedPlayersWithMatches, ...playersWithoutMatches],
+      globalAverage
+    };
   }, [players, BAYESIAN_WEIGHT]);
 
   const handleAddMatch = async (matchData: MatchFormData) => {
@@ -436,6 +443,15 @@ function App() {
                 <span>Histórico</span>
               </button>
 
+              <button
+                onClick={() => setShowTips(true)}
+                className="text-xs sm:text-sm text-yellow-400 hover:text-yellow-300 bg-yellow-900/20 px-3 sm:px-4 py-2 rounded-lg border border-yellow-700/30 transition-colors flex items-center space-x-2"
+                title="Ver dicas baseadas em performance"
+              >
+                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                <span>Dicas</span>
+              </button>
+
               {/* Refresh Button */}
               <button
                 onClick={() => refetch(true)}
@@ -467,6 +483,10 @@ function App() {
                 rank={index + 1}
                 onPlayerClick={setSelectedPlayer}
                 mvpCount={mvpCounts.get(player.id) || 0}
+                topPlayerScore={sortedPlayers.length > 0 ? 
+                  (sortedPlayers[0].bayesianRating || sortedPlayers[0].averageRating) : undefined
+                }
+                globalAverage={globalAverage}
               />
             ))}
           </div>
@@ -881,6 +901,17 @@ function App() {
         onPlayerClick={setSelectedPlayer}
         players={players}
       />
+
+      {/* Modal de Dicas */}
+      {showTips && (
+        <React.Suspense fallback={<div>Carregando...</div>}>
+          <TipsModal
+            isOpen={showTips}
+            onClose={() => setShowTips(false)}
+            players={players}
+          />
+        </React.Suspense>
+      )}
     </div>
   );
 }
