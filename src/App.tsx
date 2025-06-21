@@ -12,11 +12,13 @@ import { useSupabase } from './hooks/useSupabase';
 import { supabase } from './lib/supabase';
 import { SupabaseTest } from './components/SupabaseTest';
 import { PasswordPrompt } from './components/PasswordPrompt';
+import { RankResetPrompt } from './components/RankResetPrompt';
 import { Crown, Gamepad2, Swords, Loader2, AlertCircle, RefreshCw, Shield, Zap, Star, Target, Heart, TrendingDown } from 'lucide-react';
 
 function App() {
-  const { players, laneLeaders, serverBagre, worstKDA, loading, error, addMatch, resetPlayerStats, refetch } = useSupabase();
+  const { players, laneLeaders, serverBagre, worstKDA, weeklyTop3History, loading, error, addMatch, resetPlayerStats, resetRankWithTop3Save, refetch } = useSupabase();
   const [showResetPassword, setShowResetPassword] = React.useState(false);
+  const [showRankReset, setShowRankReset] = React.useState(false);
   const [selectedPlayer, setSelectedPlayer] = React.useState<Player | null>(null);
   const [showMatchHistory, setShowMatchHistory] = React.useState(false);
   const [showTips, setShowTips] = React.useState(false);
@@ -441,6 +443,15 @@ function App() {
               >
                 <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
                 <span>Histórico</span>
+              </button>
+
+              <button
+                onClick={() => setShowRankReset(true)}
+                className="text-xs sm:text-sm text-red-400 hover:text-red-300 bg-red-900/20 px-3 sm:px-4 py-2 rounded-lg border border-red-700/30 transition-colors flex items-center space-x-2"
+                title="Resetar ranking (salva top 3)"
+              >
+                <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                <span>Resetar Rank</span>
               </button>
 
               <button
@@ -883,6 +894,13 @@ function App() {
         onConfirm={resetPlayerStats}
         title="Reset Debug"
         description="Esta ação vai resetar todos os dados do ranking"
+      />
+
+      {/* Rank Reset Prompt */}
+      <RankResetPrompt
+        isOpen={showRankReset}
+        onClose={() => setShowRankReset(false)}
+        onConfirm={resetRankWithTop3Save}
       />
 
       {/* Modal da Página Individual do Jogador */}

@@ -15,6 +15,9 @@ export interface Player {
     assists: number;
   };
   matches: Match[];
+  top1Count?: number;
+  top2Count?: number;
+  top3Count?: number;
 }
 
 export interface Match {
@@ -92,4 +95,23 @@ export interface WorstKDA {
   assists: number;
   kdRatio: number;
   matchDate: string;
+}
+
+export interface WeeklyTop3 {
+  id: string;
+  week_start_date: string;
+  week_end_date: string;
+  top1_player_id: string;
+  top1_player_name: string;
+  top1_player_avatar: string;
+  top1_score: number;
+  top2_player_id: string;
+  top2_player_name: string;
+  top2_player_avatar: string;
+  top2_score: number;
+  top3_player_id: string;
+  top3_player_name: string;
+  top3_player_avatar: string;
+  top3_score: number;
+  created_at: string;
 }

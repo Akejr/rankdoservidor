@@ -220,6 +220,30 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayer
                     mvpCount >= 10 ? 'text-yellow-100' : mvpCount >= 5 ? 'text-yellow-200' : 'text-yellow-400'
                   }`}>{mvpCount}</span>
                 </div>
+                
+                {/* Top 3 histórico icons */}
+                {(player.top1Count || player.top2Count || player.top3Count) && (
+                  <div className="flex items-center space-x-1">
+                    {player.top1Count && (
+                      <div className="flex items-center space-x-0.5 px-1.5 py-0.5 bg-gradient-to-r from-yellow-600/50 to-yellow-500/50 border border-yellow-400/50 rounded-full">
+                        <Trophy className="w-2.5 h-2.5 text-yellow-300" />
+                        <span className="text-xs font-bold text-yellow-200">{player.top1Count}</span>
+                      </div>
+                    )}
+                    {player.top2Count && (
+                      <div className="flex items-center space-x-0.5 px-1.5 py-0.5 bg-gradient-to-r from-gray-600/50 to-gray-500/50 border border-gray-400/50 rounded-full">
+                        <Trophy className="w-2.5 h-2.5 text-gray-300" />
+                        <span className="text-xs font-bold text-gray-200">{player.top2Count}</span>
+                      </div>
+                    )}
+                    {player.top3Count && (
+                      <div className="flex items-center space-x-0.5 px-1.5 py-0.5 bg-gradient-to-r from-amber-700/50 to-amber-600/50 border border-amber-500/50 rounded-full">
+                        <Trophy className="w-2.5 h-2.5 text-amber-400" />
+                        <span className="text-xs font-bold text-amber-300">{player.top3Count}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center space-x-2 text-xs bg-slate-800/30 px-2 py-1 rounded-lg border border-slate-600/30">
                   <div className="flex items-center space-x-1">
                     <span className="text-green-400 font-bold">K</span>
@@ -359,6 +383,33 @@ export const RankingCard: React.FC<RankingCardProps> = ({ player, rank, onPlayer
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-400 rounded-full animate-ping"></div>
                 )}
               </div>
+              
+              {/* Top 3 histórico icons desktop */}
+              {(player.top1Count || player.top2Count || player.top3Count) && (
+                <div className="flex items-center space-x-2">
+                  {player.top1Count && (
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-gradient-to-r from-yellow-600/50 to-yellow-500/50 border border-yellow-400/50 rounded-full shadow-lg">
+                      <Trophy className="w-3 h-3 text-yellow-300" />
+                      <span className="text-sm font-bold text-yellow-200">{player.top1Count}</span>
+                      <span className="text-xs font-semibold text-yellow-300/80 uppercase">TOP1</span>
+                    </div>
+                  )}
+                  {player.top2Count && (
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-gradient-to-r from-gray-600/50 to-gray-500/50 border border-gray-400/50 rounded-full shadow-lg">
+                      <Trophy className="w-3 h-3 text-gray-300" />
+                      <span className="text-sm font-bold text-gray-200">{player.top2Count}</span>
+                      <span className="text-xs font-semibold text-gray-300/80 uppercase">TOP2</span>
+                    </div>
+                  )}
+                  {player.top3Count && (
+                    <div className="flex items-center space-x-1 px-2 py-1 bg-gradient-to-r from-amber-700/50 to-amber-600/50 border border-amber-500/50 rounded-full shadow-lg">
+                      <Trophy className="w-3 h-3 text-amber-400" />
+                      <span className="text-sm font-bold text-amber-300">{player.top3Count}</span>
+                      <span className="text-xs font-semibold text-amber-400/80 uppercase">TOP3</span>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="flex items-center space-x-3 text-sm bg-slate-800/30 px-3 py-1.5 rounded-lg border border-slate-600/30">
                 <div className="flex items-center space-x-1">
                   <span className="text-green-400 font-bold">K</span>

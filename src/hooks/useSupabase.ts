@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { supabase, DatabasePlayer, DatabaseMatch, DatabaseMatchParticipant } from '../lib/supabase';
-import { Player, MatchFormData, Match, MatchParticipant, LaneLeader, Lane, ServerBagre, WorstKDA } from '../types';
+import { Player, MatchFormData, Match, MatchParticipant, LaneLeader, Lane, ServerBagre, WorstKDA, WeeklyTop3 } from '../types';
 
 export function useSupabase() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [laneLeaders, setLaneLeaders] = useState<LaneLeader[]>([]);
   const [serverBagre, setServerBagre] = useState<ServerBagre | null>(null);
   const [worstKDA, setWorstKDA] = useState<WorstKDA | null>(null);
+  const [weeklyTop3History, setWeeklyTop3History] = useState<WeeklyTop3[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastFetch, setLastFetch] = useState<number>(0);
@@ -44,47 +45,88 @@ export function useSupabase() {
         assists: dbPlayer.average_assists
       },
       matches: [] // Carregar separadamente se necessário
+      // top1Count, top2Count, top3Count serão adicionados posteriormente se existirem
     };
   };
 
-  // Calcular líderes de cada lane
+  // Calcular líderes de cada lane baseado na média (mínimo 3 partidas)
   const fetchLaneLeaders = async () => {
     try {
       const lanes: Lane[] = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUP'];
       const leaders: LaneLeader[] = [];
 
       for (const lane of lanes) {
+        // Query para calcular média por jogador na lane com pelo menos 3 partidas
         const { data, error } = await supabase
           .from('match_participants')
           .select(`
-            rating,
-            lane,
             player_id,
-            created_at,
+            rating,
             players (
               name,
               avatar
             )
           `)
-          .eq('lane', lane)
-          .order('rating', { ascending: false })
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
+          .eq('lane', lane);
 
         if (error) {
-          console.warn(`Nenhum líder encontrado para lane ${lane}:`, error);
+          console.warn(`Erro ao buscar dados para lane ${lane}:`, error);
           continue;
         }
 
-        if (data && data.players) {
+        if (!data || data.length === 0) {
+          console.warn(`Nenhum dado encontrado para lane ${lane}`);
+          continue;
+        }
+
+        // Agrupar por jogador e calcular médias
+        const playerStats = new Map<string, {
+          playerId: string,
+          playerName: string,
+          playerAvatar: string,
+          totalRating: number,
+          matchCount: number,
+          averageRating: number
+        }>();
+
+        data.forEach((participant: any) => {
+          const playerId = participant.player_id;
+          const rating = participant.rating;
+          const playerInfo = participant.players;
+
+          if (!playerStats.has(playerId)) {
+            playerStats.set(playerId, {
+              playerId,
+              playerName: playerInfo?.name || 'Jogador Desconhecido',
+              playerAvatar: playerInfo?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${playerId}`,
+              totalRating: 0,
+              matchCount: 0,
+              averageRating: 0
+            });
+          }
+
+          const stats = playerStats.get(playerId)!;
+          stats.totalRating += rating;
+          stats.matchCount += 1;
+          stats.averageRating = stats.totalRating / stats.matchCount;
+        });
+
+        // Filtrar jogadores com pelo menos 3 partidas e encontrar o melhor
+        const eligiblePlayers = Array.from(playerStats.values())
+          .filter(stats => stats.matchCount >= 3)
+          .sort((a, b) => b.averageRating - a.averageRating);
+
+        if (eligiblePlayers.length > 0) {
+          const bestPlayer = eligiblePlayers[0];
           leaders.push({
             lane,
-            playerId: data.player_id,
-            playerName: (data.players as any).name,
-            playerAvatar: (data.players as any).avatar,
-            bestRating: data.rating
+            playerId: bestPlayer.playerId,
+            playerName: bestPlayer.playerName,
+            playerAvatar: bestPlayer.playerAvatar,
+            bestRating: bestPlayer.averageRating
           });
+        } else {
+          console.warn(`Nenhum jogador com 3+ partidas na lane ${lane}`);
         }
       }
 
@@ -289,6 +331,9 @@ export function useSupabase() {
       const convertedPlayers = data.map(convertDatabasePlayerToPlayer);
       setPlayers(convertedPlayers);
       
+      // Carregar histórico de tops 
+      await retryWithBackoff(() => fetchWeeklyTop3History());
+      
       // Carregar líderes de lane, bagre e pior KDA também com retry
       await retryWithBackoff(() => fetchLaneLeaders());
       await retryWithBackoff(() => fetchServerBagre());
@@ -397,7 +442,190 @@ export function useSupabase() {
     }
   };
 
-  // Resetar dados (para desenvolvimento)
+  // Buscar histórico de tops semanais
+  const fetchWeeklyTop3History = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('weekly_top3')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.warn('Tabela weekly_top3 não existe ainda:', error);
+        return;
+      }
+
+      setWeeklyTop3History(data || []);
+    } catch (err) {
+      console.error('Erro ao carregar histórico semanal:', err);
+    }
+  };
+
+  // Calcular contadores de tops dos players
+  const calculateTopCounts = (playersData: Player[]) => {
+    return playersData.map(player => {
+      let top1Count = 0;
+      let top2Count = 0;
+      let top3Count = 0;
+
+      weeklyTop3History.forEach(week => {
+        if (week.top1_player_id === player.id) top1Count++;
+        if (week.top2_player_id === player.id) top2Count++;
+        if (week.top3_player_id === player.id) top3Count++;
+      });
+
+      // Só adicionar as propriedades se houver contagem > 0
+      const result: Player = { ...player };
+      if (top1Count > 0) result.top1Count = top1Count;
+      if (top2Count > 0) result.top2Count = top2Count;
+      if (top3Count > 0) result.top3Count = top3Count;
+
+      return result;
+    });
+  };
+
+  // Salvar top 3 da semana atual
+  const saveCurrentWeekTop3 = async () => {
+    try {
+      if (players.length < 3) {
+        console.log('Menos de 3 jogadores, não é possível salvar top 3');
+        return;
+      }
+
+      // Ordenar players por bayesian rating ou average rating
+      const sortedPlayers = [...players]
+        .filter(p => p.totalMatches > 0)
+        .sort((a, b) => {
+          const aScore = a.bayesianRating || a.averageRating;
+          const bScore = b.bayesianRating || b.averageRating;
+          return bScore - aScore;
+        });
+
+      if (sortedPlayers.length < 3) {
+        console.log('Menos de 3 jogadores com partidas, não é possível salvar top 3');
+        return;
+      }
+
+      const now = new Date();
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay()); // Domingo da semana atual
+      weekStart.setHours(0, 0, 0, 0);
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6); // Sábado da semana atual
+      weekEnd.setHours(23, 59, 59, 999);
+
+      const weeklyTop3Data = {
+        week_start_date: weekStart.toISOString(),
+        week_end_date: weekEnd.toISOString(),
+        top1_player_id: sortedPlayers[0].id,
+        top1_player_name: sortedPlayers[0].name,
+        top1_player_avatar: sortedPlayers[0].avatar,
+        top1_score: sortedPlayers[0].bayesianRating || sortedPlayers[0].averageRating,
+        top2_player_id: sortedPlayers[1].id,
+        top2_player_name: sortedPlayers[1].name,
+        top2_player_avatar: sortedPlayers[1].avatar,
+        top2_score: sortedPlayers[1].bayesianRating || sortedPlayers[1].averageRating,
+        top3_player_id: sortedPlayers[2].id,
+        top3_player_name: sortedPlayers[2].name,
+        top3_player_avatar: sortedPlayers[2].avatar,
+        top3_score: sortedPlayers[2].bayesianRating || sortedPlayers[2].averageRating,
+        created_at: now.toISOString()
+      };
+
+      // Verificar se já existe um registro para esta semana
+      const { data: existingWeek } = await supabase
+        .from('weekly_top3')
+        .select('id')
+        .gte('week_start_date', weekStart.toISOString())
+        .lte('week_start_date', weekEnd.toISOString())
+        .single();
+
+      if (existingWeek) {
+        // Atualizar registro existente
+        const { error } = await supabase
+          .from('weekly_top3')
+          .update(weeklyTop3Data)
+          .eq('id', existingWeek.id);
+
+        if (error) {
+          console.warn('Erro ao atualizar top 3 semanal, tentando criar tabela:', error);
+          await createWeeklyTop3Table();
+        }
+      } else {
+        // Criar novo registro
+        const { error } = await supabase
+          .from('weekly_top3')
+          .insert([weeklyTop3Data]);
+
+        if (error) {
+          console.warn('Erro ao inserir top 3 semanal, tentando criar tabela:', error);
+          await createWeeklyTop3Table();
+        }
+      }
+
+      console.log('Top 3 da semana salvo com sucesso');
+    } catch (err) {
+      console.error('Erro ao salvar top 3 da semana:', err);
+    }
+  };
+
+  // Criar tabela weekly_top3 se não existir
+  const createWeeklyTop3Table = async () => {
+    try {
+      const { error } = await supabase.rpc('create_weekly_top3_table');
+      if (error) {
+        console.warn('Não foi possível criar tabela automaticamente:', error);
+      }
+    } catch (err) {
+      console.warn('Tabela weekly_top3 precisa ser criada manualmente:', err);
+    }
+  };
+
+  // Resetar dados e salvar top 3 atual
+  const resetRankWithTop3Save = async () => {
+    try {
+      setError(null);
+
+      // 1. Salvar o top 3 da semana atual antes de resetar
+      await saveCurrentWeekTop3();
+
+      // 2. Deletar todas as partidas
+      await supabase.from('match_participants').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('matches').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+      // 3. Resetar estatísticas dos jogadores
+      const { error } = await supabase
+        .from('players')
+        .update({
+          total_matches: 0,
+          total_rating: 0,
+          total_kills: 0,
+          total_deaths: 0,
+          total_assists: 0,
+          average_rating: 0,
+          average_kills: 0,
+          average_deaths: 0,
+          average_assists: 0,
+          updated_at: new Date().toISOString()
+        })
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (error) throw error;
+
+      // 4. Recarregar dados
+      await fetchPlayers(true);
+      await fetchWeeklyTop3History();
+
+      console.log('Reset completo realizado com sucesso, top 3 salvo!');
+    } catch (err) {
+      console.error('Erro ao resetar ranking:', err);
+      setError(err instanceof Error ? err.message : 'Erro ao resetar ranking');
+      throw err;
+    }
+  };
+
+  // Resetar dados (para desenvolvimento) - mantém função original
   const resetPlayerStats = async () => {
     try {
       setError(null);
@@ -437,6 +665,14 @@ export function useSupabase() {
     fetchPlayers();
   }, []);
 
+  // Atualizar contadores de tops quando o histórico for carregado
+  useEffect(() => {
+    if (weeklyTop3History.length > 0 && players.length > 0) {
+      const playersWithTopCounts = calculateTopCounts(players);
+      setPlayers(playersWithTopCounts);
+    }
+  }, [weeklyTop3History]);
+
   // Remover realtime para evitar problemas de rate limiting
   // O realtime será substituído por refresh manual quando necessário
 
@@ -445,10 +681,12 @@ export function useSupabase() {
     laneLeaders,
     serverBagre,
     worstKDA,
+    weeklyTop3History,
     loading,
     error,
     addMatch,
     resetPlayerStats,
+    resetRankWithTop3Save,
     refetch: fetchPlayers
   };
 } 
